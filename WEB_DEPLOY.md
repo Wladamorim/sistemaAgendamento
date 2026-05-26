@@ -23,7 +23,7 @@ O arquivo `vercel.json` ja possui rewrite para SPA.
 2. Publish directory: `dist`
 3. Configure as variaveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
 
-O arquivo `public/_redirects` ja possui fallback para `index.html`.
+Para Cloudflare Pages, nao use arquivo `_redirects` neste projeto. Configure o fallback de SPA na propria Cloudflare, se necessario.
 
 ## Supabase Auth
 
