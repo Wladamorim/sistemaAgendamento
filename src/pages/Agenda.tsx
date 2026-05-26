@@ -318,15 +318,33 @@ export function Agenda({ user }: AgendaProps) {
       {!isLoading && professionals.length > 0 ? (
         <>
           <section className="agenda-day-summary" aria-label="Resumo operacional do dia">
-            <div>
+            <div className="agenda-day-summary__overview">
               <span>Resumo do dia</span>
+              <div className="agenda-summary-metrics" aria-label="Indicadores do dia">
+                <div className="agenda-summary-metric">
+                  <strong>{activeAppointments.length}</strong>
+                  <small>Agendamentos</small>
+                </div>
+                <div className="agenda-summary-metric">
+                  <strong>{finishedCount}</strong>
+                  <small>Finalizados</small>
+                </div>
+                <div className="agenda-summary-metric">
+                  <strong>{confirmedCount}</strong>
+                  <small>Confirmados</small>
+                </div>
+                <div className="agenda-summary-metric">
+                  <strong>{scheduleBlocks.length}</strong>
+                  <small>Bloqueios</small>
+                </div>
+              </div>
               <strong>
                 {activeAppointments.length} agendamento(s) · {finishedCount} finalizado(s) · {confirmedCount} confirmado(s) ·{" "}
                 {scheduleBlocks.length} bloqueio(s)
               </strong>
               <small>{scheduledOrConfirmedCount} agendado(s)/confirmado(s) ativos no período.</small>
             </div>
-            <div>
+            <div className="agenda-day-summary__next">
               <span>Próximo atendimento</span>
               {nextAppointment ? (
                 <strong>
@@ -343,7 +361,7 @@ export function Agenda({ user }: AgendaProps) {
             <label className="agenda-search">
               <input
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar cliente, telefone, serviço ou profissional"
+                placeholder="Cliente, serviço ou profissional"
                 value={searchTerm}
               />
             </label>
