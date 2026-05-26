@@ -7165,6 +7165,276 @@ button {
   margin-top: 4px;
 }
 
+/* Combos page */
+.combos-page {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.combos-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.combos-toolbar {
+  margin-bottom: 16px;
+}
+
+.combo-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combo-list-panel {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  padding: 0;
+}
+
+.combo-list {
+  display: grid;
+  min-width: 0;
+}
+
+.combo-list__header,
+.combo-list-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns:
+    minmax(210px, 1.35fr)
+    minmax(150px, 0.85fr)
+    minmax(170px, 0.95fr)
+    minmax(120px, 0.58fr)
+    minmax(168px, 168px);
+  column-gap: 18px;
+  align-items: center;
+}
+
+.combo-list__header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  text-transform: uppercase;
+}
+
+.combo-list-row {
+  border-bottom: 1px solid var(--color-border);
+  padding: 15px 16px;
+  transition: background-color 140ms ease;
+}
+
+.combo-list-row:last-child {
+  border-bottom: 0;
+}
+
+.combo-list-row:hover {
+  background: #f9fbff;
+}
+
+.combo-list-row__name,
+.combo-list-row__meta,
+.combo-list-row__status {
+  min-width: 0;
+}
+
+.combo-list-row__name {
+  display: grid;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  gap: 3px;
+  padding: 0;
+  text-align: left;
+}
+
+.combo-list-row__name strong,
+.combo-list-row__meta strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-list-row__name span,
+.combo-list-row__meta span,
+.combo-list-row__status .client-table-secondary {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-list-row__name:hover strong {
+  color: var(--color-primary);
+}
+
+.combo-list-row__meta,
+.combo-list-row__status {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.combo-list-row__actions {
+  min-width: 168px;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+.combo-list-row__actions .table-action-button,
+.combo-list-row__actions .client-actions-menu summary {
+  min-width: 76px;
+  padding-right: 9px;
+  padding-left: 9px;
+}
+
+.combo-modal {
+  max-width: 760px;
+}
+
+.modal-field-wide {
+  grid-column: 1 / -1;
+}
+
+.combo-side-panel .client-notes-box + .client-notes-box {
+  margin-top: 10px;
+}
+
+.combo-payment-box {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  padding: 12px;
+}
+
+.combo-payment-box > strong {
+  color: var(--color-text);
+  font-size: 0.88rem;
+}
+
+.combo-payment-box > span {
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.combo-payment-options {
+  display: grid;
+  gap: 8px;
+}
+
+.combo-payment-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  padding: 10px;
+}
+
+.combo-payment-option--selected {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.combo-payment-option span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.combo-payment-option strong {
+  color: var(--color-text);
+  font-size: 0.86rem;
+}
+
+.combo-payment-option em,
+.combo-payment-option small {
+  color: var(--color-text-secondary);
+  font-style: normal;
+  font-weight: 650;
+}
+
+.combo-payment-option small {
+  font-size: 0.76rem;
+}
+
+@media (max-width: 1100px) {
+  .combo-list__header {
+    display: none;
+  }
+
+  .combo-list-row {
+    grid-template-columns: minmax(0, 1fr) minmax(168px, auto);
+    row-gap: 12px;
+  }
+
+  .combo-list-row__name,
+  .combo-list-row__meta,
+  .combo-list-row__status {
+    grid-column: 1;
+  }
+
+  .combo-list-row__actions {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .combos-header__actions {
+    justify-content: stretch;
+  }
+
+  .combos-header__actions > * {
+    flex: 1 1 100%;
+  }
+
+  .combo-list-row {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-list-row__name,
+  .combo-list-row__meta,
+  .combo-list-row__status,
+  .combo-list-row__actions {
+    grid-column: 1;
+  }
+
+  .combo-list-row__actions {
+    grid-row: auto;
+    justify-content: flex-start;
+    justify-self: stretch;
+  }
+
+  .combo-list-row__actions .table-action-button,
+  .combo-list-row__actions .client-actions-menu,
+  .combo-list-row__actions .client-actions-menu summary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 1100px) {
   .service-list__header {
     display: none;
@@ -8162,5 +8432,595 @@ button {
 
   .free-slot-button::after {
     content: "Agendar";
+  }
+}
+
+/* Final responsive hardening for web/mobile */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  overflow-x: clip;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+.app-content,
+.agenda-page,
+.clients-page,
+.professionals-page,
+.services-page,
+.combos-page,
+.movement-page,
+.attendants-page,
+.restricted-page,
+.placeholder-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .app-content {
+    min-width: 0;
+  }
+
+  .agenda-page,
+  .clients-page,
+  .professionals-page,
+  .services-page,
+  .combos-page,
+  .movement-page,
+  .attendants-page {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .clients-toolbar-top,
+  .combos-header__actions,
+  .agenda-toolbar__actions,
+  .movement-date-controls {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    display: block !important;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  .sidebar {
+    display: none !important;
+  }
+
+  .mobile-app-header,
+  .mobile-bottom-nav {
+    display: flex;
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+  }
+
+  .app-content {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
+    padding-top: 58px;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .auth-shell {
+    min-height: 100dvh;
+    padding: 18px;
+  }
+
+  .auth-panel {
+    width: min(100%, 420px);
+    max-width: 100%;
+    padding: 22px;
+  }
+
+  .auth-panel h1 {
+    font-size: clamp(1.7rem, 8vw, 2.4rem);
+    line-height: 1.05;
+  }
+
+  .login-form {
+    gap: 14px;
+  }
+
+  .login-form input,
+  .login-form .primary-button {
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .agenda-page,
+  .clients-page,
+  .professionals-page,
+  .services-page,
+  .combos-page,
+  .movement-page,
+  .attendants-page,
+  .restricted-page,
+  .placeholder-page {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .agenda-toolbar,
+  .movement-header,
+  .clients-header,
+  .combos-header {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .agenda-toolbar__title h1,
+  .movement-header h1,
+  .clients-header h1,
+  .combos-header h1 {
+    font-size: clamp(1.45rem, 6vw, 1.85rem);
+    line-height: 1.08;
+  }
+
+  .agenda-toolbar__title p,
+  .movement-header p,
+  .clients-header p,
+  .combos-header p {
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .agenda-toolbar__actions,
+  .agenda-toolbar__admin-actions,
+  .movement-date-controls,
+  .clients-toolbar-top,
+  .combos-header__actions,
+  .movement-filters-panel {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    width: 100%;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .agenda-toolbar__actions > *,
+  .agenda-toolbar__admin-actions > *,
+  .movement-date-controls > *,
+  .clients-toolbar-top > *,
+  .combos-header__actions > *,
+  .movement-filters-panel > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .selected-date,
+  .date-navigation,
+  .date-navigation button,
+  .add-button,
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .cancel-button,
+  .save-button,
+  .table-action-button,
+  .client-actions-menu summary {
+    min-height: 44px;
+  }
+
+  .client-search,
+  .client-search input,
+  .agenda-search,
+  .agenda-search input,
+  .movement-date-input,
+  .movement-date-input input,
+  .movement-date-input select,
+  .field-label,
+  .field-label input,
+  .field-label select,
+  .field-label textarea {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .clients-toolbar--operational,
+  .agenda-quick-controls,
+  .movement-filters-panel,
+  .combos-toolbar {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .clients-filter-chips,
+  .agenda-filter-chips,
+  .combo-tab-list {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .clients-filter-chips::-webkit-scrollbar,
+  .agenda-filter-chips::-webkit-scrollbar,
+  .combo-tab-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-chip,
+  .agenda-filter-chips button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    max-width: 72vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agenda-grid-shell {
+    display: none !important;
+  }
+
+  .agenda-mobile-list {
+    display: grid !important;
+    width: 100%;
+    max-width: 760px;
+  }
+
+  .clients-table-panel,
+  .professional-list-panel,
+  .service-list-panel,
+  .combo-list-panel,
+  .attendant-list-panel,
+  .movement-table-panel {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .clients-list__header,
+  .professional-list__header,
+  .service-list__header,
+  .combo-list__header,
+  .attendant-list__header {
+    display: none !important;
+  }
+
+  .clients-list,
+  .professional-list,
+  .service-list,
+  .combo-list,
+  .attendant-list {
+    display: grid !important;
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .client-list-row,
+  .professional-list-row,
+  .service-list-row,
+  .combo-list-row,
+  .attendant-list-row {
+    display: grid !important;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: 14px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .client-list-row__client,
+  .client-list-row__agenda,
+  .client-list-row__status,
+  .client-list-row__actions,
+  .professional-name-button,
+  .professional-list-row__specialty,
+  .professional-list-row__services,
+  .professional-list-row__status,
+  .professional-list-row__actions,
+  .service-list-row__name,
+  .service-list-row__price,
+  .service-list-row__professionals,
+  .service-list-row__status,
+  .service-list-row__actions,
+  .combo-list-row__name,
+  .combo-list-row__meta,
+  .combo-list-row__status,
+  .combo-list-row__actions,
+  .attendant-name-button,
+  .attendant-list-row__role,
+  .attendant-list-row__status,
+  .attendant-list-row__access,
+  .attendant-list-row__actions {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .client-list-row__agenda {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .client-row-actions,
+  .client-list-row__actions,
+  .professional-list-row__actions,
+  .service-list-row__actions,
+  .combo-list-row__actions,
+  .attendant-list-row__actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .client-row-actions .table-action-button,
+  .client-row-actions .client-actions-menu,
+  .client-row-actions .client-actions-menu summary {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .client-actions-menu__content {
+    right: 0;
+    left: auto;
+    max-width: calc(100vw - 44px);
+  }
+
+  .professional-service-chips,
+  .service-professional-chips {
+    display: flex !important;
+    max-width: 100%;
+    flex-wrap: nowrap !important;
+    overflow: hidden;
+  }
+
+  .professional-service-chips span,
+  .service-professional-chips span {
+    max-width: 46%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .movement-metrics-grid,
+  .metrics-grid,
+  .movement-highlight-grid,
+  .movement-finance-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .movement-table-wrap {
+    overflow: visible !important;
+  }
+
+  .movement-table,
+  .movement-table thead,
+  .movement-table tbody,
+  .movement-table tr,
+  .movement-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .movement-table thead {
+    display: none;
+  }
+
+  .movement-table tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: 12px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .movement-table td {
+    display: grid;
+    grid-template-columns: minmax(92px, 34%) minmax(0, 1fr);
+    gap: 10px;
+    border: 0;
+    padding: 7px 0;
+  }
+
+  .movement-table td::before {
+    color: var(--color-muted);
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .modal-backdrop,
+  .client-drawer-backdrop,
+  .add-menu-backdrop {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    overflow: hidden;
+    padding: 0 !important;
+  }
+
+  .appointment-modal,
+  .appointment-modal--wide,
+  .confirm-dialog,
+  .add-menu,
+  .client-side-panel,
+  .combo-modal {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 58px) !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  .appointment-modal,
+  .appointment-modal--wide,
+  .confirm-dialog,
+  .add-menu {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .appointment-modal {
+    padding: 0 !important;
+  }
+
+  .appointment-modal__header,
+  .appointment-modal__body,
+  .appointment-modal__footer {
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+  }
+
+  .appointment-modal__body,
+  .appointment-modal > .details-list,
+  .appointment-modal > .appointment-actions,
+  .appointment-modal > .finish-payment-form,
+  .appointment-modal > .reschedule-form,
+  .appointment-modal > form,
+  .confirm-dialog__body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .appointment-modal > .details-list,
+  .appointment-modal > .appointment-actions,
+  .appointment-modal > .finish-payment-form,
+  .appointment-modal > .reschedule-form,
+  .appointment-modal > form {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .finish-payment-form__actions,
+  .appointment-modal__footer,
+  .confirm-dialog__actions,
+  .modal-actions {
+    position: sticky;
+    bottom: 0;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .finish-payment-form__actions button,
+  .appointment-modal__footer button,
+  .confirm-dialog__actions button,
+  .modal-actions button,
+  .client-side-panel__actions button {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .client-side-panel {
+    height: calc(100dvh - 58px) !important;
+    overflow-y: auto;
+    border-left: 0 !important;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .client-side-panel__actions {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .modal-form-grid,
+  .modal-form-grid--two,
+  .field-grid,
+  .details-list,
+  .reschedule-grid,
+  .payment-split__item,
+  .client-detail-grid,
+  .client-summary-grid,
+  .professional-side-panel .client-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-field-wide {
+    grid-column: 1 !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .agenda-page,
+  .clients-page,
+  .professionals-page,
+  .services-page,
+  .combos-page,
+  .movement-page,
+  .attendants-page {
+    padding: 12px;
+  }
+
+  .mobile-bottom-nav__item,
+  .mobile-more-menu__item {
+    font-size: 0.68rem;
+  }
+
+  .movement-table td {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .client-row-actions,
+  .client-list-row__actions,
+  .professional-list-row__actions,
+  .service-list-row__actions,
+  .combo-list-row__actions,
+  .attendant-list-row__actions {
+    grid-template-columns: 1fr;
   }
 }

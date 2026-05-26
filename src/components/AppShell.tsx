@@ -6,6 +6,7 @@ export type AppRoute =
   | "clientes"
   | "profissionais"
   | "servicos"
+  | "combos"
   | "movimentacao"
   | "atendentes";
 
@@ -32,12 +33,14 @@ const navigationItems: NavigationItem[] = [
   { label: "Profissionais", route: "profissionais" },
   { label: "Serviços", route: "servicos" },
   { label: "Movimentação", route: "movimentacao", adminOnly: true },
+  { label: "Combos", route: "combos", adminOnly: true },
   { label: "Atendentes", route: "atendentes", adminOnly: true },
 ];
 
 const navigationIcons: Record<AppRoute, NavigationIcon> = {
   agenda: "calendar",
   clientes: "users",
+  combos: "tag",
   profissionais: "briefcase",
   servicos: "tag",
   movimentacao: "chart",
@@ -102,6 +105,7 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
   const canSeeAdminItems = isAdmin(user);
   const [mobileMoreIsOpen, setMobileMoreIsOpen] = useState(false);
   const visibleNavigationItems = navigationItems.filter((item) => !item.adminOnly || canSeeAdminItems);
+  const activeNavigationItem = navigationItems.find((item) => item.route === activeRoute);
   const bottomNavigationItems = visibleNavigationItems.filter((item) =>
     ["agenda", "clientes", "servicos"].includes(item.route),
   );
@@ -118,8 +122,8 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
     <div className="app-shell">
       <header className="mobile-app-header">
         <div>
-          <strong>AgendeAqui</strong>
-          <span>{user.role}</span>
+          <strong>{activeNavigationItem?.label ?? "AgendeAqui"}</strong>
+          <span>AgendeAqui - {user.role}</span>
         </div>
         <button
           aria-expanded={mobileMoreIsOpen}

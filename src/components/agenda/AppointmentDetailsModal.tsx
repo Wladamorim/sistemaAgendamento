@@ -6,8 +6,10 @@ import {
   formatTime,
   generateTimeSlots,
 } from "../../lib/agenda";
+import { formatDateValue, getComboBalanceLabel, getComboLinkedLabel, getComboPriceLabel } from "../../lib/combos";
 import { supabase } from "../../lib/supabase";
 import type { Appointment, AppointmentDetails, Client, Procedure, Professional } from "../../types/agenda";
+import type { ClientComboFull } from "../../types/combo";
 import type { AppUser } from "../../types/user";
 
 interface AppointmentDetailsModalProps {
@@ -54,9 +56,10 @@ const paymentMethodOptions = [
   { label: "Transferência", value: "transferencia" },
   { label: "Cortesia", value: "cortesia" },
   { label: "Múltiplas formas", value: "multiplas" },
+  { label: "Combo", value: "combo" },
   { label: "Outro", value: "outro" },
 ];
-const singlePaymentMethodOptions = paymentMethodOptions.filter((option) => option.value !== "multiplas");
+const singlePaymentMethodOptions = paymentMethodOptions.filter((option) => !["multiplas", "combo"].includes(option.value));
 const installmentOptions = Array.from({ length: 12 }, (_, index) => index + 1);
 const paymentColumnsSql =
   "alter table public.appointments add column if not exists payment_method text, add column if not exists payment_installments integer, add column if not exists payment_details jsonb, add column if not exists paid_amount numeric(10,2);";
@@ -79,6 +82,32 @@ function displayValue(value: string | number | null | undefined) {
   }
 
   return String(value);
+}
+
+function getComboPaymentInfo(paymentDetails: unknown) {
+  if (!paymentDetails || typeof paymentDetails !== "object") {
+    return null;
+  }
+
+  const details = paymentDetails as {
+    combo_name?: unknown;
+    production_value?: unknown;
+    sessions_used?: unknown;
+    type?: unknown;
+  };
+
+  if (details.type !== "combo") {
+    return null;
+  }
+
+  return {
+    comboName: typeof details.combo_name === "string" ? details.combo_name : "Combo",
+    productionValue:
+      typeof details.production_value === "number" || typeof details.production_value === "string"
+        ? details.production_value
+        : null,
+    sessionsUsed: typeof details.sessions_used === "number" ? details.sessions_used : 1,
+  };
 }
 
 function getSchedulingErrorMessage(errorMessage: string) {
@@ -154,6 +183,9 @@ export function AppointmentDetailsModal({
   const [paymentNote, setPaymentNote] = useState("");
   const [cashReceived, setCashReceived] = useState("");
   const [finishPassword, setFinishPassword] = useState("");
+  const [compatibleCombos, setCompatibleCombos] = useState<ClientComboFull[]>([]);
+  const [isLoadingCombos, setIsLoadingCombos] = useState(false);
+  const [selectedClientComboId, setSelectedClientComboId] = useState("");
   const [multiplePayments, setMultiplePayments] = useState<MultiplePaymentItem[]>([createEmptyPaymentItem()]);
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
@@ -174,7 +206,7 @@ export function AppointmentDetailsModal({
       const { data: appointmentData, error: appointmentError } = await supabase
         .from("appointments")
         .select(
-          "id, client_id, procedure_id, professional_id, scheduled_date, start_time, end_time, price_at_booking, duration_at_booking, status_code, notes, cancellation_reason",
+          "id, client_id, procedure_id, professional_id, scheduled_date, start_time, end_time, price_at_booking, duration_at_booking, payment_method, payment_installments, payment_details, paid_amount, status_code, notes, cancellation_reason",
         )
         .eq("id", appointment.id)
         .single();
@@ -253,6 +285,67 @@ export function AppointmentDetailsModal({
       isMounted = false;
     };
   }, [appointment.id]);
+
+  useEffect(() => {
+    const currentDetails = details;
+
+    if (!currentDetails || paymentMethod !== "combo") {
+      setCompatibleCombos([]);
+      setSelectedClientComboId("");
+      return;
+    }
+
+    let isMounted = true;
+    const comboClientId = currentDetails.client_id;
+    const comboProcedureId = currentDetails.procedure_id;
+    const comboCategoryId = currentDetails.procedure?.category_id ?? null;
+
+    async function loadCompatibleCombos() {
+      setIsLoadingCombos(true);
+      setErrorMessage(null);
+
+      const { data, error } = await supabase
+        .from("v_client_combos_full")
+        .select("*")
+        .eq("client_id", comboClientId)
+        .eq("effective_status", "active")
+        .gt("remaining_sessions", 0)
+        .gte("expiration_date", new Date().toISOString().slice(0, 10))
+        .order("expiration_date", { ascending: true });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("LOAD COMPATIBLE COMBOS ERROR:", error);
+        setCompatibleCombos([]);
+        setErrorMessage("Nao foi possivel carregar combos do cliente. Verifique se a migration de Combos foi aplicada.");
+        setIsLoadingCombos(false);
+        return;
+      }
+
+      const matchingCombos = ((data ?? []) as ClientComboFull[]).filter((combo) => {
+        if (combo.linked_type === "procedure") {
+          return combo.procedure_id === comboProcedureId;
+        }
+
+        return Boolean(comboCategoryId) && combo.category_id === comboCategoryId;
+      });
+
+      setCompatibleCombos(matchingCombos);
+      setSelectedClientComboId((current) =>
+        current && matchingCombos.some((combo) => combo.id === current) ? current : "",
+      );
+      setIsLoadingCombos(false);
+    }
+
+    loadCompatibleCombos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [details, paymentMethod]);
 
   async function handleCancelAppointment() {
     if (!details || !reason.trim() || !password.trim()) {
@@ -464,6 +557,54 @@ export function AppointmentDetailsModal({
       return;
     }
 
+    if (paymentMethod === "combo") {
+      if (!selectedClientComboId) {
+        setErrorMessage("Selecione o combo que sera usado neste atendimento.");
+        return;
+      }
+
+      setIsFinishing(true);
+      setErrorMessage(null);
+
+      const passwordIsValid = await verifyCurrentPassword(finishPassword);
+
+      if (!passwordIsValid) {
+        setIsFinishing(false);
+        return;
+      }
+
+      const { error: comboError } = await supabase.rpc("finalize_appointment_with_combo", {
+        p_appointment_id: details.id,
+        p_client_combo_id: selectedClientComboId,
+        p_used_by: currentUser.id,
+      });
+
+      if (comboError) {
+        console.error("FINISH APPOINTMENT WITH COMBO ERROR:", comboError);
+        setErrorMessage(
+          comboError.message.includes("finalize_appointment_with_combo")
+            ? "A funcao de finalizar com combo ainda nao existe no Supabase. Aplique a migration de Combos."
+            : comboError.message,
+        );
+        setIsFinishing(false);
+        return;
+      }
+
+      setIsFinishing(false);
+      setPaymentMethod("");
+      setPaymentInstallments("");
+      setPaymentNote("");
+      setCashReceived("");
+      setFinishPassword("");
+      setSelectedClientComboId("");
+      setCompatibleCombos([]);
+      setMultiplePayments([createEmptyPaymentItem()]);
+      setShowFinishPaymentForm(false);
+      onChanged("Atendimento finalizado com sucesso.");
+      onClose();
+      return;
+    }
+
     const paymentPayload = buildPaymentPayload();
 
     if (!paymentPayload) {
@@ -544,6 +685,8 @@ export function AppointmentDetailsModal({
     setPaymentNote("");
     setCashReceived("");
     setFinishPassword("");
+    setSelectedClientComboId("");
+    setCompatibleCombos([]);
     setMultiplePayments([createEmptyPaymentItem()]);
     setShowFinishPaymentForm(false);
     onChanged("Atendimento finalizado com sucesso.");
@@ -722,6 +865,7 @@ export function AppointmentDetailsModal({
   const newEndTime = newStartTime && rescheduleDuration ? addMinutesToTime(newStartTime, rescheduleDuration) : "";
   const canEditAppointment = Boolean(details && !inactiveStatusCodes.includes(details.status_code ?? ""));
   const canFinishAppointment = Boolean(details && finalizableStatusCodes.includes(details.status_code ?? ""));
+  const comboPaymentInfo = getComboPaymentInfo(details?.payment_details);
   const appointmentValue = getPriceNumber(details?.price_at_booking ?? details?.procedure?.price ?? 0);
   const multiplePaymentTotal = multiplePayments.reduce((sum, item) => sum + parseCurrencyInput(item.amount), 0);
   const multiplePaymentDifference = Number((appointmentValue - multiplePaymentTotal).toFixed(2));
@@ -732,6 +876,7 @@ export function AppointmentDetailsModal({
   const canSubmitFinish =
     Boolean(finishPassword.trim()) &&
     Boolean(paymentMethod) &&
+    (paymentMethod !== "combo" || Boolean(selectedClientComboId)) &&
     (!finishNeedsInstallments || Boolean(paymentInstallments)) &&
     (paymentMethod !== "multiplas" ||
       (multiplePayments.filter((item) => item.method && parseCurrencyInput(item.amount) > 0).length >= 2 &&
@@ -804,6 +949,22 @@ export function AppointmentDetailsModal({
               <span>Status</span>
               <strong>{displayValue(appointment.status_name ?? details.status_code)}</strong>
             </div>
+            {details.payment_method === "combo" ? (
+              <>
+                <div>
+                  <span>Pagamento</span>
+                  <strong>Pago com combo</strong>
+                </div>
+                <div>
+                  <span>Combo usado</span>
+                  <strong>{comboPaymentInfo?.comboName ?? "Combo"}</strong>
+                </div>
+                <div>
+                  <span>ProduÃ§Ã£o registrada</span>
+                  <strong>{formatCurrency(comboPaymentInfo?.productionValue ?? details.price_at_booking)}</strong>
+                </div>
+              </>
+            ) : null}
             <div>
               <span>Observações do agendamento</span>
               <strong>{displayValue(details.notes ?? appointment.appointment_notes)}</strong>
@@ -896,6 +1057,7 @@ export function AppointmentDetailsModal({
                 onChange={(event) => {
                   setPaymentMethod(event.target.value);
                   setPaymentInstallments("");
+                  setSelectedClientComboId("");
                 }}
                 value={paymentMethod}
               >
@@ -907,6 +1069,45 @@ export function AppointmentDetailsModal({
                 ))}
               </select>
             </label>
+
+            {paymentMethod === "combo" ? (
+              <div className="combo-payment-box">
+                <strong>Combo do cliente</strong>
+                {isLoadingCombos ? (
+                  <span>Carregando combos compativeis...</span>
+                ) : compatibleCombos.length === 0 ? (
+                  <span>Este cliente nao possui combo valido para este servico ou categoria.</span>
+                ) : (
+                  <div className="combo-payment-options">
+                    {compatibleCombos.map((combo) => (
+                      <label
+                        className={
+                          selectedClientComboId === combo.id
+                            ? "combo-payment-option combo-payment-option--selected"
+                            : "combo-payment-option"
+                        }
+                        key={combo.id}
+                      >
+                        <input
+                          checked={selectedClientComboId === combo.id}
+                          onChange={() => setSelectedClientComboId(combo.id)}
+                          type="radio"
+                          value={combo.id}
+                        />
+                        <span>
+                          <strong>{combo.name}</strong>
+                          <em>{getComboBalanceLabel(combo)}</em>
+                          <small>
+                            {getComboLinkedLabel(combo)} Â· Validade: {formatDateValue(combo.expiration_date)} Â· Valor do
+                            combo: {getComboPriceLabel(combo)}
+                          </small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             {paymentMethod === "cartao_credito" ? (
               <label className="field-label">

@@ -5,6 +5,7 @@ import type { AppUser } from "../types/user";
 import { Agenda } from "./Agenda";
 import { Atendentes } from "./Atendentes";
 import { Clientes } from "./Clientes";
+import { Combos } from "./Combos";
 import { Movimentacao } from "./Movimentacao";
 import { Profissionais } from "./Profissionais";
 import { Servicos } from "./Servicos";
@@ -20,6 +21,7 @@ const validRoutes: AppRoute[] = [
   "clientes",
   "profissionais",
   "servicos",
+  "combos",
   "movimentacao",
   "atendentes",
 ];
@@ -31,7 +33,7 @@ function getRouteFromHash(): AppRoute {
 
 export function Home({ user, isSigningOut, onSignOut }: HomeProps) {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(() => getRouteFromHash());
-  const adminOnlyRoutes: AppRoute[] = ["movimentacao", "atendentes"];
+  const adminOnlyRoutes: AppRoute[] = ["combos", "movimentacao", "atendentes"];
   const isRestricted = adminOnlyRoutes.includes(activeRoute) && !isAdmin(user);
 
   useEffect(() => {
@@ -63,6 +65,8 @@ export function Home({ user, isSigningOut, onSignOut }: HomeProps) {
     content = <Profissionais user={user} />;
   } else if (activeRoute === "servicos") {
     content = <Servicos user={user} />;
+  } else if (activeRoute === "combos") {
+    content = <Combos user={user} />;
   } else if (activeRoute === "movimentacao") {
     content = <Movimentacao user={user} />;
   } else if (activeRoute === "atendentes") {

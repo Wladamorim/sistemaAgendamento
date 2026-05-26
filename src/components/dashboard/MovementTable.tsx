@@ -1,5 +1,5 @@
 import { formatCurrency, formatTime } from "../../lib/agenda";
-import { getAppointmentAmount, getPaymentLabel, type MovementAppointment } from "../../lib/movement";
+import { getAppointmentCashAmount, getAppointmentProductionAmount, getPaymentLabel, type MovementAppointment } from "../../lib/movement";
 
 interface MovementTableProps {
   appointments: MovementAppointment[];
@@ -46,7 +46,12 @@ export function MovementTable({ appointments, title = "Atendimentos do periodo" 
                   <td data-label="Servico">{appointment.procedure_name ?? "Nao informado"}</td>
                   <td data-label="Profissional">{appointment.professional_name ?? "Nao informado"}</td>
                   <td data-label="Pagamento">{getPaymentLabel(appointment.payment_method)}</td>
-                  <td data-label="Valor">{formatCurrency(getAppointmentAmount(appointment))}</td>
+                  <td data-label="Valor">
+                    <strong>{formatCurrency(getAppointmentProductionAmount(appointment))}</strong>
+                    {appointment.payment_method === "combo" ? (
+                      <span className="movement-table-muted">Caixa {formatCurrency(getAppointmentCashAmount(appointment))}</span>
+                    ) : null}
+                  </td>
                   <td data-label="Status">
                     <span className={appointment.status_code === "completed" ? "status-pill status-pill--active" : "status-pill"}>
                       {appointment.status_name ?? appointment.status_code ?? "Sem status"}

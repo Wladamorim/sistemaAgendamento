@@ -33,6 +33,19 @@ export interface PaymentBreakdownItem {
   percent: number;
 }
 
+export interface MovementComboSale {
+  id: string;
+  client_id: string | null;
+  client_name: string | null;
+  name: string;
+  created_at: string | null;
+  start_date: string;
+  package_price: number | string | null;
+  purchase_payment_method: string | null;
+  purchase_payment_details: unknown | null;
+  status: string | null;
+}
+
 interface PaymentDetailItem {
   method?: string;
   amount?: number | string;
@@ -41,6 +54,7 @@ interface PaymentDetailItem {
 const paymentLabels: Record<string, string> = {
   cartao_credito: "Cartao de credito",
   cartao_debito: "Cartao de debito",
+  combo: "Combo",
   cortesia: "Cortesia",
   dinheiro: "Dinheiro",
   multiplas: "Multiplas formas",
@@ -59,6 +73,10 @@ export function getPaymentLabel(method: string | null | undefined) {
 }
 
 export function getAppointmentAmount(appointment: MovementAppointment) {
+  return getAppointmentCashAmount(appointment);
+}
+
+export function getAppointmentCashAmount(appointment: MovementAppointment) {
   const paidAmount = appointment.paid_amount === null ? null : Number(appointment.paid_amount);
 
   if (paidAmount !== null && !Number.isNaN(paidAmount)) {
@@ -72,6 +90,30 @@ export function getAppointmentAmount(appointment: MovementAppointment) {
   }
 
   return 0;
+}
+
+export function getAppointmentProductionAmount(appointment: MovementAppointment) {
+  if (appointment.payment_method === "combo") {
+    const productionValue = getComboProductionValue(appointment.payment_details);
+
+    if (productionValue !== null) {
+      return productionValue;
+    }
+  }
+
+  const bookingPrice = appointment.price_at_booking === null ? null : Number(appointment.price_at_booking);
+
+  if (bookingPrice !== null && !Number.isNaN(bookingPrice)) {
+    return bookingPrice;
+  }
+
+  return getAppointmentCashAmount(appointment);
+}
+
+export function getComboSaleCashAmount(sale: MovementComboSale) {
+  const amount = sale.package_price === null ? null : Number(sale.package_price);
+
+  return amount !== null && !Number.isNaN(amount) ? amount : 0;
 }
 
 export function getCompletedAppointments(appointments: MovementAppointment[]) {
@@ -94,12 +136,14 @@ export function getTopItem(groupedData: MovementGroupItem[]) {
   return [...groupedData].sort((a, b) => b.total - a.total || b.count - a.count)[0];
 }
 
-export function buildPaymentBreakdown(appointments: MovementAppointment[]) {
+export function buildPaymentBreakdown(appointments: MovementAppointment[], comboSales: MovementComboSale[] = []) {
   const totals = new Map<string, number>();
-  const totalRevenue = appointments.reduce((sum, appointment) => sum + getAppointmentAmount(appointment), 0);
+  const totalRevenue =
+    appointments.reduce((sum, appointment) => sum + getAppointmentCashAmount(appointment), 0) +
+    comboSales.reduce((sum, sale) => sum + getComboSaleCashAmount(sale), 0);
 
   appointments.forEach((appointment) => {
-    const amount = getAppointmentAmount(appointment);
+    const amount = getAppointmentCashAmount(appointment);
 
     if (appointment.payment_method === "multiplas") {
       const items = getMultiplePaymentItems(appointment.payment_details);
@@ -117,6 +161,27 @@ export function buildPaymentBreakdown(appointments: MovementAppointment[]) {
     }
 
     addPaymentTotal(totals, appointment.payment_method || "nao_informado", amount);
+  });
+
+  comboSales.forEach((sale) => {
+    const amount = getComboSaleCashAmount(sale);
+
+    if (sale.purchase_payment_method === "multiplas") {
+      const items = getMultiplePaymentItems(sale.purchase_payment_details);
+
+      if (items.length === 0) {
+        addPaymentTotal(totals, "nao_informado", amount);
+        return;
+      }
+
+      items.forEach((item) => {
+        const itemAmount = Number(item.amount ?? 0);
+        addPaymentTotal(totals, item.method || "nao_informado", Number.isNaN(itemAmount) ? 0 : itemAmount);
+      });
+      return;
+    }
+
+    addPaymentTotal(totals, sale.purchase_payment_method || "nao_informado", amount);
   });
 
   return [...totals.entries()]
@@ -137,7 +202,7 @@ function groupAppointments(appointments: MovementAppointment[], getName: (appoin
     const current = groups.get(name) ?? { averageTicket: 0, count: 0, name, total: 0 };
 
     current.count += 1;
-    current.total += getAppointmentAmount(appointment);
+    current.total += getAppointmentProductionAmount(appointment);
     current.averageTicket = current.count > 0 ? current.total / current.count : 0;
     groups.set(name, current);
   });
@@ -145,6 +210,22 @@ function groupAppointments(appointments: MovementAppointment[], getName: (appoin
   return [...groups.values()].sort(
     (first, second) => second.total - first.total || second.count - first.count || first.name.localeCompare(second.name),
   );
+}
+
+function getComboProductionValue(paymentDetails: unknown) {
+  if (!paymentDetails || typeof paymentDetails !== "object") {
+    return null;
+  }
+
+  const details = paymentDetails as { production_value?: unknown; type?: unknown };
+
+  if (details.type !== "combo") {
+    return null;
+  }
+
+  const productionValue = Number(details.production_value ?? 0);
+
+  return Number.isNaN(productionValue) ? null : productionValue;
 }
 
 function addPaymentTotal(totals: Map<string, number>, method: string, amount: number) {

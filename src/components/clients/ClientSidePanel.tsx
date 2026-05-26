@@ -1,5 +1,14 @@
+import { useEffect, useState } from "react";
 import { formatCurrency, formatTime } from "../../lib/agenda";
+import {
+  formatDateValue as formatComboDateValue,
+  getComboBalanceLabel,
+  getComboLinkedLabel,
+  getComboStatusLabel,
+} from "../../lib/combos";
+import { supabase } from "../../lib/supabase";
 import type { ClientAppointmentRecord, ClientOperationalSummary, ClientRecord } from "../../types/client";
+import type { ClientComboFull, ComboUsageFull } from "../../types/combo";
 
 interface ClientSidePanelProps {
   canDelete: boolean;
@@ -81,6 +90,52 @@ export function ClientSidePanel({
   onNewAppointment,
 }: ClientSidePanelProps) {
   const isInactive = client.is_active === false;
+  const [clientCombos, setClientCombos] = useState<ClientComboFull[]>([]);
+  const [comboUsages, setComboUsages] = useState<ComboUsageFull[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadClientCombos() {
+      const [combosResult, usagesResult] = await Promise.all([
+        supabase
+          .from("v_client_combos_full")
+          .select("*")
+          .eq("client_id", client.id)
+          .order("expiration_date", { ascending: true }),
+        supabase
+          .from("v_combo_usages_full")
+          .select("*")
+          .eq("client_id", client.id)
+          .order("used_at", { ascending: false })
+          .limit(6),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (combosResult.error) {
+        console.error("CLIENT COMBOS ERROR:", combosResult.error);
+        setClientCombos([]);
+      } else {
+        setClientCombos((combosResult.data ?? []) as ClientComboFull[]);
+      }
+
+      if (usagesResult.error) {
+        console.error("CLIENT COMBO USAGES ERROR:", usagesResult.error);
+        setComboUsages([]);
+      } else {
+        setComboUsages((usagesResult.data ?? []) as ComboUsageFull[]);
+      }
+    }
+
+    loadClientCombos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [client.id]);
 
   return (
     <div className="client-drawer-backdrop" role="presentation" onMouseDown={onClose}>
@@ -178,6 +233,61 @@ export function ClientSidePanel({
               </strong>
             </div>
           </div>
+        </section>
+
+        <section className="client-drawer-section">
+          <h3>Combos do cliente</h3>
+          {clientCombos.length === 0 ? (
+            <div className="client-panel-empty">Nenhum combo vinculado a este cliente.</div>
+          ) : (
+            <ul className="client-history-list">
+              {clientCombos.slice(0, 6).map((combo) => (
+                <li className="client-history-item" key={combo.id}>
+                  <div>
+                    <strong>{combo.name}</strong>
+                    <span>{getComboLinkedLabel(combo)}</span>
+                  </div>
+                  <div>
+                    <span>{getComboBalanceLabel(combo)}</span>
+                    <span>
+                      Validade: {formatComboDateValue(combo.expiration_date)} Â·{" "}
+                      {getComboStatusLabel(combo.effective_status)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="client-drawer-section">
+          <h3>Uso de combos</h3>
+          {comboUsages.length === 0 ? (
+            <div className="client-panel-empty">Nenhum uso de combo registrado para este cliente.</div>
+          ) : (
+            <ul className="client-history-list">
+              {comboUsages.map((usage) => (
+                <li className="client-history-item" key={usage.id}>
+                  <div>
+                    <strong>{usage.combo_name ?? "Combo"}</strong>
+                    <span>{usage.procedure_name ?? "Servico nao informado"}</span>
+                  </div>
+                  <div>
+                    <span>
+                      {usage.used_at
+                        ? new Intl.DateTimeFormat("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          }).format(new Date(usage.used_at))
+                        : "Data nao informada"}
+                    </span>
+                    <span>{formatCurrency(usage.production_value)} de producao</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="client-drawer-section">

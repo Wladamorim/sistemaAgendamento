@@ -14,12 +14,15 @@ import {
 } from "../lib/agenda";
 import {
   buildPaymentBreakdown,
-  getAppointmentAmount,
+  getAppointmentCashAmount,
+  getAppointmentProductionAmount,
+  getComboSaleCashAmount,
   getCompletedAppointments,
   getPaymentLabel,
   getTopItem,
   groupByCategory,
   groupByProfessional,
+  type MovementComboSale,
   type MovementAppointment,
   type PaymentBreakdownItem,
 } from "../lib/movement";
@@ -41,6 +44,7 @@ type MovementPaymentFilter =
   | "transferencia"
   | "cortesia"
   | "multiplas"
+  | "combo"
   | "nao_informado";
 
 interface PeriodRange {
@@ -104,6 +108,20 @@ interface RawViewAppointmentRow {
   paid_amount?: number | string | null;
 }
 
+interface RawComboSaleRow {
+  id: string;
+  client_id: string | null;
+  client_name: string | null;
+  name: string;
+  created_at: string | null;
+  start_date: string;
+  package_price: number | string | null;
+  purchase_payment_method: string | null;
+  purchase_payment_details: unknown | null;
+  effective_status: string | null;
+  status?: string | null;
+}
+
 const periodOptions: { label: string; value: MovementPeriod }[] = [
   { label: "Diario", value: "day" },
   { label: "Semanal", value: "week" },
@@ -149,6 +167,7 @@ const paymentFilterOptions: { label: string; value: MovementPaymentFilter }[] = 
   { label: "Transferencia", value: "transferencia" },
   { label: "Cortesia", value: "cortesia" },
   { label: "Multiplas", value: "multiplas" },
+  { label: "Combo", value: "combo" },
   { label: "Nao informado", value: "nao_informado" },
 ];
 
@@ -359,6 +378,21 @@ function normalizeViewMovementAppointment(row: RawViewAppointmentRow): MovementA
   };
 }
 
+function normalizeComboSale(row: RawComboSaleRow): MovementComboSale {
+  return {
+    client_id: row.client_id,
+    client_name: row.client_name ?? null,
+    created_at: row.created_at,
+    id: row.id,
+    name: row.name,
+    package_price: row.package_price,
+    purchase_payment_details: row.purchase_payment_details ?? null,
+    purchase_payment_method: row.purchase_payment_method ?? null,
+    start_date: row.start_date,
+    status: row.effective_status ?? row.status ?? null,
+  };
+}
+
 function getStatusLabel(statusCode: string | null) {
   const labels: Record<string, string> = {
     cancelled: "Cancelado",
@@ -393,7 +427,7 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
       const hour = appointment.start_time.slice(0, 2);
       const key = `${hour}h`;
       const current = buckets.get(key) ?? { label: key, total: 0 };
-      current.total += getAppointmentAmount(appointment);
+      current.total += getAppointmentProductionAmount(appointment);
       buckets.set(key, current);
     });
 
@@ -415,7 +449,7 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
     appointments.forEach((appointment) => {
       const currentBucket = buckets.get(appointment.scheduled_date);
       if (currentBucket) {
-        currentBucket.total += getAppointmentAmount(appointment);
+        currentBucket.total += getAppointmentProductionAmount(appointment);
       }
     });
 
@@ -437,7 +471,7 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
     const key = appointment.scheduled_date.slice(0, 7);
     const currentBucket = buckets.get(key);
     if (currentBucket) {
-      currentBucket.total += getAppointmentAmount(appointment);
+      currentBucket.total += getAppointmentProductionAmount(appointment);
     }
   });
 
@@ -495,6 +529,7 @@ function queryAppointments(range: PeriodRange, includePaymentColumns: boolean) {
       `
               id,
               client_id,
+              procedure_id,
               professional_id,
               scheduled_date,
               start_time,
@@ -604,6 +639,24 @@ async function loadMovementAppointments(range: PeriodRange) {
   throw viewWithPayment.error;
 }
 
+async function loadMovementComboSales(range: PeriodRange) {
+  const nextDay = formatDateForQuery(addDays(range.end, 1));
+  const { data, error } = await supabase
+    .from("v_client_combos_full")
+    .select("id, client_id, client_name, name, created_at, start_date, package_price, purchase_payment_method, purchase_payment_details, effective_status, status")
+    .gte("created_at", `${range.startValue}T00:00:00`)
+    .lt("created_at", `${nextDay}T00:00:00`)
+    .neq("effective_status", "cancelled")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("Nao foi possivel carregar vendas de combos na movimentacao:", error);
+    return [];
+  }
+
+  return ((data ?? []) as unknown as RawComboSaleRow[]).map(normalizeComboSale);
+}
+
 function downloadCsv(appointments: MovementAppointment[]) {
   const headers = ["data", "horario", "cliente", "servico", "profissional", "categoria", "valor", "pagamento", "status"];
   const rows = appointments.map((appointment) => [
@@ -613,7 +666,7 @@ function downloadCsv(appointments: MovementAppointment[]) {
     appointment.procedure_name ?? "",
     appointment.professional_name ?? "",
     appointment.category_name ?? "",
-    String(getAppointmentAmount(appointment)).replace(".", ","),
+    String(getAppointmentProductionAmount(appointment)).replace(".", ","),
     getPaymentLabel(appointment.payment_method),
     appointment.status_name ?? appointment.status_code ?? "",
   ]);
@@ -668,7 +721,7 @@ function RevenueChart({ items }: { items: ChartItem[] }) {
 
   return (
     <section className="dashboard-panel revenue-chart-panel">
-      <h2>Rendimento por periodo</h2>
+      <h2>Producao por periodo</h2>
       {maxValue === 0 ? (
         <div className="movement-empty-state">
           <strong>Sem dados para exibir grafico</strong>
@@ -705,6 +758,8 @@ export function Movimentacao({ user }: MovimentacaoProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<MovementPeriod>("day");
   const [appointments, setAppointments] = useState<MovementAppointment[]>([]);
   const [previousAppointments, setPreviousAppointments] = useState<MovementAppointment[]>([]);
+  const [comboSales, setComboSales] = useState<MovementComboSale[]>([]);
+  const [previousComboSales, setPreviousComboSales] = useState<MovementComboSale[]>([]);
   const [statusFilter, setStatusFilter] = useState<MovementStatusFilter>("all");
   const [paymentFilter, setPaymentFilter] = useState<MovementPaymentFilter>("all");
   const [professionalFilter, setProfessionalFilter] = useState("all");
@@ -732,9 +787,11 @@ export function Movimentacao({ user }: MovimentacaoProps) {
       setErrorMessage(null);
 
       try {
-        const [currentData, previousData] = await Promise.all([
+        const [currentData, previousData, currentComboSales, previousComboSalesData] = await Promise.all([
           loadMovementAppointments(currentRange),
           loadMovementAppointments(previousRange),
+          loadMovementComboSales(currentRange),
+          loadMovementComboSales(previousRange),
         ]);
 
         if (!isMounted) {
@@ -743,6 +800,8 @@ export function Movimentacao({ user }: MovimentacaoProps) {
 
         setAppointments(currentData);
         setPreviousAppointments(previousData);
+        setComboSales(currentComboSales);
+        setPreviousComboSales(previousComboSalesData);
         setIsLoading(false);
       } catch (error) {
         if (!isMounted) {
@@ -752,6 +811,8 @@ export function Movimentacao({ user }: MovimentacaoProps) {
         console.error("Erro ao carregar movimentação:", error);
         setAppointments([]);
         setPreviousAppointments([]);
+        setComboSales([]);
+        setPreviousComboSales([]);
         setErrorMessage(
           "Não foi possível carregar a movimentação. Verifique se a view v_appointments_full possui as colunas de pagamento.",
         );
@@ -778,15 +839,26 @@ export function Movimentacao({ user }: MovimentacaoProps) {
   const previousTotalPeople = new Set(previousCompletedAppointments.map((appointment) => appointment.client_id ?? appointment.id)).size;
   const totalCompleted = completedAppointments.length;
   const previousTotalCompleted = previousCompletedAppointments.length;
-  const totalRevenue = completedAppointments.reduce((sum, appointment) => sum + getAppointmentAmount(appointment), 0);
-  const previousTotalRevenue = previousCompletedAppointments.reduce(
-    (sum, appointment) => sum + getAppointmentAmount(appointment),
+  const totalProduction = completedAppointments.reduce((sum, appointment) => sum + getAppointmentProductionAmount(appointment), 0);
+  const previousTotalProduction = previousCompletedAppointments.reduce(
+    (sum, appointment) => sum + getAppointmentProductionAmount(appointment),
     0,
   );
-  const averageTicket = totalCompleted > 0 ? totalRevenue / totalCompleted : 0;
+  const comboSalesTotal = comboSales.reduce((sum, sale) => sum + getComboSaleCashAmount(sale), 0);
+  const previousComboSalesTotal = previousComboSales.reduce((sum, sale) => sum + getComboSaleCashAmount(sale), 0);
+  const totalCash =
+    completedAppointments.reduce((sum, appointment) => sum + getAppointmentCashAmount(appointment), 0) + comboSalesTotal;
+  const previousTotalCash =
+    previousCompletedAppointments.reduce((sum, appointment) => sum + getAppointmentCashAmount(appointment), 0) +
+    previousComboSalesTotal;
+  const comboUsageCount = completedAppointments.filter((appointment) => appointment.payment_method === "combo").length;
+  const averageTicket = totalCompleted > 0 ? totalProduction / totalCompleted : 0;
   const previousAverageTicket =
-    previousTotalCompleted > 0 ? previousTotalRevenue / previousTotalCompleted : 0;
-  const paymentBreakdown = useMemo(() => buildPaymentBreakdown(completedAppointments), [completedAppointments]);
+    previousTotalCompleted > 0 ? previousTotalProduction / previousTotalCompleted : 0;
+  const paymentBreakdown = useMemo(
+    () => buildPaymentBreakdown(completedAppointments, comboSales),
+    [comboSales, completedAppointments],
+  );
   const chartData = useMemo(
     () => buildChartData(completedAppointments, currentRange, selectedPeriod),
     [completedAppointments, currentRange, selectedPeriod],
@@ -821,7 +893,7 @@ export function Movimentacao({ user }: MovimentacaoProps) {
   const currentPeriodLabel = formatPeriodLabel(currentRange, selectedPeriod);
   const previousPeriodRangeLabel = formatPeriodLabel(previousRange, selectedPeriod);
   const previousLabel = previousPeriodLabel[selectedPeriod];
-  const revenueLabel = selectedPeriod === "day" ? "Rendimento do dia" : `Rendimento ${periodAdjective[selectedPeriod]}`;
+  const revenueLabel = selectedPeriod === "day" ? "Caixa recebido no dia" : `Caixa ${periodAdjective[selectedPeriod]}`;
 
   if (!isAdmin(user)) {
     return <RestrictedAccess />;
@@ -889,11 +961,11 @@ export function Movimentacao({ user }: MovimentacaoProps) {
               value={String(totalPeople)}
             />
             <MetricCard
-              detail={formatComparison(totalRevenue, previousTotalRevenue, previousLabel, formatCurrency)}
+              detail={formatComparison(totalCash, previousTotalCash, previousLabel, formatCurrency)}
               icon="revenue"
               label={revenueLabel}
-              tone={getComparisonTone(totalRevenue, previousTotalRevenue)}
-              value={formatCurrency(totalRevenue)}
+              tone={getComparisonTone(totalCash, previousTotalCash)}
+              value={formatCurrency(totalCash)}
             />
             <MetricCard
               detail={formatComparison(averageTicket, previousAverageTicket, previousLabel, formatCurrency)}
@@ -913,6 +985,18 @@ export function Movimentacao({ user }: MovimentacaoProps) {
 
           <section className="movement-highlight-grid">
             <MetricCard
+              detail={`${comboUsageCount} atendimento(s) por combo`}
+              icon="revenue"
+              label="Producao do periodo"
+              value={formatCurrency(totalProduction)}
+            />
+            <MetricCard
+              detail={`${comboSales.length} venda(s) de combo`}
+              icon="revenue"
+              label="Venda de combos"
+              value={formatCurrency(comboSalesTotal)}
+            />
+            <MetricCard
               detail={busiestCategory ? `${busiestCategory.count} atendimento(s)` : undefined}
               icon="category"
               label="Area mais movimentada"
@@ -927,7 +1011,7 @@ export function Movimentacao({ user }: MovimentacaoProps) {
           </section>
 
           <section className="movement-finance-grid">
-            <PaymentBreakdown items={paymentBreakdown} total={totalRevenue} />
+            <PaymentBreakdown items={paymentBreakdown} total={totalCash} />
             <RevenueChart items={chartData} />
           </section>
 
