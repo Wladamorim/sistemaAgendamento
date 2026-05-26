@@ -1,0 +1,517 @@
+import { useEffect, useMemo, useState } from "react";
+import { isAdmin } from "../components/AppShell";
+import { ClientFormModal } from "../components/clients/ClientFormModal";
+import { ClientSearch } from "../components/clients/ClientSearch";
+import { ClientSidePanel } from "../components/clients/ClientSidePanel";
+import { ClientTable } from "../components/clients/ClientTable";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { supabase } from "../lib/supabase";
+import type {
+  ClientAppointmentRecord,
+  ClientFilterKey,
+  ClientFormValues,
+  ClientOperationalSummary,
+  ClientRecord,
+} from "../types/client";
+import type { AppUser } from "../types/user";
+
+interface ClientesProps {
+  user: AppUser;
+}
+
+const futureStatusCodes = new Set(["scheduled", "confirmed", "in_progress"]);
+
+const clientFilterOptions: { label: string; value: ClientFilterKey }[] = [
+  { label: "Todos", value: "all" },
+  { label: "Com agendamento futuro", value: "future" },
+  { label: "Sem agendamento futuro", value: "no_future" },
+  { label: "Inativos", value: "inactive" },
+];
+
+const secondaryClientFilterOptions: { label: string; value: ClientFilterKey }[] = [
+  { label: "Com atendimento concluido", value: "completed" },
+  { label: "Cadastrados recentemente", value: "recent" },
+];
+
+const emptyClientSummary: ClientOperationalSummary = {
+  history: [],
+  lastCompleted: null,
+  nextAppointment: null,
+  totalCompleted: 0,
+  totalSpent: 0,
+};
+
+function normalizeSearch(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getAppointmentDateTime(appointment: ClientAppointmentRecord) {
+  return new Date(`${appointment.scheduled_date}T${appointment.start_time || "00:00"}`);
+}
+
+function sortAppointmentsDescending(left: ClientAppointmentRecord, right: ClientAppointmentRecord) {
+  return getAppointmentDateTime(right).getTime() - getAppointmentDateTime(left).getTime();
+}
+
+function sortAppointmentsAscending(left: ClientAppointmentRecord, right: ClientAppointmentRecord) {
+  return getAppointmentDateTime(left).getTime() - getAppointmentDateTime(right).getTime();
+}
+
+function buildClientSummaries(clients: ClientRecord[], appointments: ClientAppointmentRecord[]) {
+  const now = new Date();
+  const summaries: Record<string, ClientOperationalSummary> = {};
+
+  clients.forEach((client) => {
+    const clientAppointments = appointments
+      .filter((appointment) => appointment.client_id === client.id)
+      .sort(sortAppointmentsDescending);
+    const completedAppointments = clientAppointments.filter((appointment) => appointment.status_code === "completed");
+    const nextAppointment =
+      clientAppointments
+        .filter((appointment) => {
+          if (!appointment.status_code || !futureStatusCodes.has(appointment.status_code)) {
+            return false;
+          }
+
+          return getAppointmentDateTime(appointment).getTime() >= now.getTime();
+        })
+        .sort(sortAppointmentsAscending)[0] ?? null;
+
+    summaries[client.id] = {
+      history: clientAppointments,
+      lastCompleted: completedAppointments[0] ?? null,
+      nextAppointment,
+      totalCompleted: completedAppointments.length,
+      totalSpent: completedAppointments.reduce(
+        (total, appointment) => total + Number(appointment.price_at_booking ?? 0),
+        0,
+      ),
+    };
+  });
+
+  return summaries;
+}
+
+function isRecentlyCreated(client: ClientRecord) {
+  if (!client.created_at) {
+    return false;
+  }
+
+  const createdAt = new Date(client.created_at);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+
+  return createdAt.getTime() >= cutoff.getTime();
+}
+
+function getFilterMatch(client: ClientRecord, summary: ClientOperationalSummary, filter: ClientFilterKey) {
+  if (filter === "inactive") {
+    return client.is_active === false;
+  }
+
+  if (client.is_active === false) {
+    return false;
+  }
+
+  if (filter === "future") {
+    return Boolean(summary.nextAppointment);
+  }
+
+  if (filter === "no_future") {
+    return !summary.nextAppointment;
+  }
+
+  if (filter === "completed") {
+    return summary.totalCompleted > 0;
+  }
+
+  if (filter === "recent") {
+    return isRecentlyCreated(client);
+  }
+
+  return true;
+}
+
+function getSearchMatch(client: ClientRecord, searchTerm: string) {
+  const normalizedSearch = normalizeSearch(searchTerm);
+
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return [client.full_name, client.phone, client.notes ?? ""]
+    .map(normalizeSearch)
+    .some((value) => value.includes(normalizedSearch));
+}
+
+function ClientTableSkeleton() {
+  return (
+    <section className="clients-table-panel clients-loading-panel" aria-live="polite">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div className="clients-skeleton-row" key={index}>
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+export function Clientes({ user }: ClientesProps) {
+  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [clientAppointments, setClientAppointments] = useState<ClientAppointmentRecord[]>([]);
+  const [activeFilter, setActiveFilter] = useState<ClientFilterKey>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
+  const [panelClient, setPanelClient] = useState<ClientRecord | null>(null);
+  const [clientToDeactivate, setClientToDeactivate] = useState<ClientRecord | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const userIsAdmin = isAdmin(user);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadClients() {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name, phone, birth_date, notes, is_active, created_at, updated_at")
+        .order("full_name");
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error(error);
+        setErrorMessage("Erro ao carregar clientes.");
+        setClients([]);
+        setClientAppointments([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const loadedClients = (data ?? []) as ClientRecord[];
+      setClients(loadedClients);
+
+      if (loadedClients.length === 0) {
+        setClientAppointments([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from("v_appointments_full")
+        .select(
+          "id, client_id, scheduled_date, start_time, end_time, procedure_name, professional_name, price_at_booking, status_code, status_name",
+        )
+        .in(
+          "client_id",
+          loadedClients.map((client) => client.id),
+        )
+        .order("scheduled_date", { ascending: false })
+        .order("start_time", { ascending: false });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (appointmentsError) {
+        console.error("CLIENT APPOINTMENTS ERROR:", appointmentsError);
+        setClientAppointments([]);
+        setErrorMessage("Clientes carregados, mas nao foi possivel carregar o historico de agendamentos.");
+        setIsLoading(false);
+        return;
+      }
+
+      setClientAppointments((appointmentsData ?? []) as ClientAppointmentRecord[]);
+      setIsLoading(false);
+    }
+
+    loadClients();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reloadKey]);
+
+  const clientSummaries = useMemo(
+    () => buildClientSummaries(clients, clientAppointments),
+    [clientAppointments, clients],
+  );
+
+  const filteredClients = useMemo(() => {
+    return clients.filter((client) => {
+      const summary = clientSummaries[client.id] ?? emptyClientSummary;
+      return getFilterMatch(client, summary, activeFilter) && getSearchMatch(client, searchTerm);
+    });
+  }, [activeFilter, clientSummaries, clients, searchTerm]);
+
+  const panelSummary = panelClient ? clientSummaries[panelClient.id] ?? emptyClientSummary : emptyClientSummary;
+  const hasSearchOrFilter = Boolean(searchTerm.trim()) || activeFilter !== "all";
+  const emptyTitle = clients.length === 0 ? "Nenhum cliente cadastrado" : "Nenhum cliente encontrado";
+  const emptyDescription =
+    clients.length === 0
+      ? "Cadastre o primeiro cliente para começar a criar agendamentos."
+      : "Tente ajustar a busca ou limpar os filtros.";
+
+  function showToast(message: string) {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage(null), 3600);
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setSelectedClient(null);
+    setIsSaving(false);
+  }
+
+  function handleEditClient(client: ClientRecord) {
+    setSelectedClient(client);
+    setModalMode("edit");
+  }
+
+  function handleNewAppointment(client: ClientRecord) {
+    window.sessionStorage.setItem(
+      "agenda_prefill_client",
+      JSON.stringify({
+        allergies: null,
+        birth_date: client.birth_date,
+        full_name: client.full_name,
+        id: client.id,
+        notes: client.notes,
+        phone: client.phone,
+        preferences: null,
+        restrictions: null,
+      }),
+    );
+    window.location.hash = "#/agenda";
+  }
+
+  async function handleCreateClient(values: ClientFormValues) {
+    if (!values.full_name.trim() || !values.phone.trim()) {
+      setErrorMessage("Nome completo e numero de telefone sao obrigatorios.");
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const { error } = await supabase.from("clients").insert({
+      full_name: values.full_name.trim(),
+      phone: values.phone.trim(),
+      birth_date: values.birth_date || null,
+      notes: values.notes.trim() || null,
+      is_active: true,
+    });
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Erro ao cadastrar cliente.");
+      setIsSaving(false);
+      return;
+    }
+
+    closeModal();
+    setReloadKey((current) => current + 1);
+    showToast("Cliente cadastrado com sucesso.");
+  }
+
+  async function handleUpdateClient(values: ClientFormValues) {
+    if (!selectedClient) {
+      return;
+    }
+
+    if (!values.phone.trim()) {
+      setErrorMessage("Numero de telefone e obrigatorio.");
+      return;
+    }
+
+    if (userIsAdmin && !values.full_name.trim()) {
+      setErrorMessage("Nome completo e obrigatorio.");
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const updatePayload = userIsAdmin
+      ? {
+          full_name: values.full_name.trim(),
+          phone: values.phone.trim(),
+          birth_date: values.birth_date || null,
+          notes: values.notes.trim() || null,
+          is_active: values.is_active,
+        }
+      : {
+          phone: values.phone.trim(),
+          notes: values.notes.trim() || null,
+        };
+
+    const { error } = await supabase.from("clients").update(updatePayload).eq("id", selectedClient.id);
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Erro ao atualizar cliente.");
+      setIsSaving(false);
+      return;
+    }
+
+    setPanelClient((current) =>
+      current?.id === selectedClient.id
+        ? ({
+            ...current,
+            ...updatePayload,
+            updated_at: new Date().toISOString(),
+          } as ClientRecord)
+        : current,
+    );
+    closeModal();
+    setReloadKey((current) => current + 1);
+    showToast("Cliente atualizado com sucesso.");
+  }
+
+  async function handleDeactivateClient() {
+    if (!clientToDeactivate || !userIsAdmin) {
+      return;
+    }
+
+    const { error } = await supabase.from("clients").update({ is_active: false }).eq("id", clientToDeactivate.id);
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Erro ao desativar cliente.");
+      setClientToDeactivate(null);
+      return;
+    }
+
+    if (panelClient?.id === clientToDeactivate.id) {
+      setPanelClient(null);
+    }
+
+    setClientToDeactivate(null);
+    setReloadKey((current) => current + 1);
+    showToast("Cliente desativado com sucesso.");
+  }
+
+  return (
+    <main className="clients-page clients-page--operational">
+      <header className="clients-header">
+        <div>
+          <h1>Clientes</h1>
+          <p>Gerencie clientes, historico e proximos agendamentos</p>
+        </div>
+      </header>
+
+      {toastMessage ? <p className="agenda-toast">{toastMessage}</p> : null}
+      {errorMessage ? <p className="agenda-alert">{errorMessage}</p> : null}
+
+      <section className="clients-toolbar clients-toolbar--operational">
+        <div className="clients-toolbar-top">
+          <ClientSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
+          <button className="add-button" onClick={() => setModalMode("create")} type="button">
+            + Adicionar cliente
+          </button>
+        </div>
+        <div className="clients-filter-chips" aria-label="Filtros de clientes">
+          {clientFilterOptions.map((option) => (
+            <button
+              className={activeFilter === option.value ? "filter-chip filter-chip--active" : "filter-chip"}
+              key={option.value}
+              onClick={() => setActiveFilter(option.value)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+          <details className="clients-more-filters">
+            <summary
+              className={
+                secondaryClientFilterOptions.some((option) => option.value === activeFilter)
+                  ? "filter-chip filter-chip--active"
+                  : "filter-chip"
+              }
+            >
+              Mais filtros
+            </summary>
+            <div className="clients-more-filters__content">
+              {secondaryClientFilterOptions.map((option) => (
+                <button
+                  className={activeFilter === option.value ? "filter-chip filter-chip--active" : "filter-chip"}
+                  key={option.value}
+                  onClick={() => setActiveFilter(option.value)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
+      </section>
+
+      {isLoading ? (
+        <ClientTableSkeleton />
+      ) : (
+        <ClientTable
+          canDelete={userIsAdmin}
+          clientSummaries={clientSummaries}
+          clients={filteredClients}
+          emptyDescription={hasSearchOrFilter ? emptyDescription : "Cadastre o primeiro cliente para comecar."}
+          emptyTitle={emptyTitle}
+          onDeactivate={setClientToDeactivate}
+          onEdit={handleEditClient}
+          onNewAppointment={handleNewAppointment}
+          onView={setPanelClient}
+        />
+      )}
+
+      {modalMode ? (
+        <ClientFormModal
+          client={selectedClient}
+          isSaving={isSaving}
+          mode={modalMode}
+          onClose={closeModal}
+          onSubmit={modalMode === "create" ? handleCreateClient : handleUpdateClient}
+          user={user}
+        />
+      ) : null}
+
+      {panelClient ? (
+        <ClientSidePanel
+          canDelete={userIsAdmin}
+          client={panelClient}
+          onClose={() => setPanelClient(null)}
+          onDeactivate={setClientToDeactivate}
+          onEdit={handleEditClient}
+          onNewAppointment={handleNewAppointment}
+          summary={panelSummary}
+        />
+      ) : null}
+
+      {clientToDeactivate ? (
+        <ConfirmDialog
+          confirmLabel="Desativar"
+          message="Deseja desativar este cliente? Ele nao sera removido permanentemente, apenas ficara inativo."
+          onCancel={() => setClientToDeactivate(null)}
+          onConfirm={handleDeactivateClient}
+          title="Desativar cliente"
+        />
+      ) : null}
+    </main>
+  );
+}
