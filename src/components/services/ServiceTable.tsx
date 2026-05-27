@@ -39,7 +39,7 @@ function getServiceStatus(service: ServiceRecord) {
     return {
       className: "status-pill professional-status-warning",
       label: "Sem profissional",
-      subtext: "Configuracao pendente",
+      subtext: "Configuração pendente",
     };
   }
 
@@ -63,17 +63,17 @@ export function ServiceTable({
     <section className="clients-table-panel service-list-panel">
       {services.length === 0 ? (
         <div className="clients-empty-state">
-          <strong>Nenhum servico encontrado</strong>
+          <strong>Nenhum serviço encontrado</strong>
           <span>Tente ajustar a busca ou limpar os filtros.</span>
         </div>
       ) : (
         <div className="service-list">
           <div className="service-list__header" aria-hidden="true">
-            <span>Servico</span>
-            <span>Valor/Duracao</span>
+            <span>Serviço</span>
+            <span>Valor/Duração</span>
             <span>Profissionais</span>
-            <span>Situacao</span>
-            <span>Acoes</span>
+            <span>Situação</span>
+            <span>Ações</span>
           </div>
 
           {services.map((service) => {
@@ -117,7 +117,7 @@ export function ServiceTable({
                   </button>
                   {canManage ? (
                     <details className="client-actions-menu">
-                      <summary>Acoes</summary>
+                      <summary>Ações</summary>
                       <div className="client-actions-menu__content">
                         <button onClick={() => onEdit(service)} type="button">
                           Editar

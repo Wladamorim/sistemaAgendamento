@@ -85,7 +85,7 @@ export function AgendaMobileList({
                   {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
                 </span>
                 <strong>{appointment.client_name ?? "Cliente sem nome"}</strong>
-                <span>{appointment.procedure_name ?? appointment.category_name ?? "Procedimento nao informado"}</span>
+                <span>{appointment.procedure_name ?? appointment.category_name ?? "Procedimento não informado"}</span>
                 <small>{professional.name}</small>
                 {appointment.client_phone ? <small>{appointment.client_phone}</small> : null}
                 <em>{appointment.status_name ?? appointment.status_code ?? "Sem status"}</em>

@@ -1,4 +1,18 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  BriefcaseBusiness,
+  CalendarDays,
+  ClipboardList,
+  LogOut,
+  MoreHorizontal,
+  Package,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { AppUser } from "../types/user";
 
 export type AppRoute =
@@ -15,8 +29,6 @@ interface NavigationItem {
   route: AppRoute;
   adminOnly?: boolean;
 }
-
-type NavigationIcon = "calendar" | "users" | "briefcase" | "tag" | "chart" | "shield";
 
 interface AppShellProps {
   activeRoute: AppRoute;
@@ -37,65 +49,15 @@ const navigationItems: NavigationItem[] = [
   { label: "Atendentes", route: "atendentes", adminOnly: true },
 ];
 
-const navigationIcons: Record<AppRoute, NavigationIcon> = {
-  agenda: "calendar",
-  clientes: "users",
-  combos: "tag",
-  profissionais: "briefcase",
-  servicos: "tag",
-  movimentacao: "chart",
-  atendentes: "shield",
+const navigationIcons: Record<AppRoute, LucideIcon> = {
+  agenda: CalendarDays,
+  clientes: Users,
+  combos: Package,
+  profissionais: BriefcaseBusiness,
+  servicos: ClipboardList,
+  movimentacao: BarChart3,
+  atendentes: ShieldCheck,
 };
-
-function NavigationIcon({ name }: { name: NavigationIcon }) {
-  const paths: Record<NavigationIcon, ReactNode> = {
-    calendar: (
-      <>
-        <path d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
-        <path d="M8 12h3M8 16h7" />
-      </>
-    ),
-    users: (
-      <>
-        <path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20" />
-        <path d="M9.5 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-        <path d="M21 20v-1a3.5 3.5 0 0 0-2.7-3.4M16.5 4.1a3.5 3.5 0 0 1 0 6.8" />
-      </>
-    ),
-    briefcase: (
-      <>
-        <path d="M9 6V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1" />
-        <path d="M4 7h16a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1Z" />
-        <path d="M3 12h18M10 12v2h4v-2" />
-      </>
-    ),
-    tag: (
-      <>
-        <path d="M20 11.5 12.5 19a2 2 0 0 1-2.8 0L4 13.3V4h9.3l5.7 5.7a2 2 0 0 1 0 2.8Z" />
-        <path d="M8.5 8.5h.01" />
-        <path d="M11 12h5" />
-      </>
-    ),
-    chart: (
-      <>
-        <path d="M4 19h16" />
-        <path d="M7 16V9M12 16V5M17 16v-3" />
-      </>
-    ),
-    shield: (
-      <>
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-        <path d="M9 12l2 2 4-5" />
-      </>
-    ),
-  };
-
-  return (
-    <svg aria-hidden="true" className="sidebar__icon" fill="none" viewBox="0 0 24 24">
-      {paths[name]}
-    </svg>
-  );
-}
 
 export function isAdmin(user: AppUser) {
   return user.role === "Administrador";
@@ -103,6 +65,9 @@ export function isAdmin(user: AppUser) {
 
 export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate, onSignOut }: AppShellProps) {
   const canSeeAdminItems = isAdmin(user);
+  const [sidebarIsCollapsed, setSidebarIsCollapsed] = useState(() => {
+    return window.localStorage.getItem("sidebarCollapsed") === "true";
+  });
   const [mobileMoreIsOpen, setMobileMoreIsOpen] = useState(false);
   const visibleNavigationItems = navigationItems.filter((item) => !item.adminOnly || canSeeAdminItems);
   const activeNavigationItem = navigationItems.find((item) => item.route === activeRoute);
@@ -118,8 +83,12 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
     onNavigate(route);
   }
 
+  useEffect(() => {
+    window.localStorage.setItem("sidebarCollapsed", String(sidebarIsCollapsed));
+  }, [sidebarIsCollapsed]);
+
   return (
-    <div className="app-shell">
+    <div className={sidebarIsCollapsed ? "app-shell app-shell--sidebar-collapsed" : "app-shell"}>
       <header className="mobile-app-header">
         <div>
           <strong>{activeNavigationItem?.label ?? "AgendeAqui"}</strong>
@@ -136,35 +105,65 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
         </button>
       </header>
 
-      <aside className="sidebar">
+      <aside className="sidebar" aria-label="Menu principal">
         <div className="sidebar__brand">
           <span className="brand-mark" aria-hidden="true">
-            SA
+            AA
           </span>
           <div>
-            <strong>Sistema de Agendamentos</strong>
+            <strong>AgendeAqui</strong>
             <span>{user.role}</span>
           </div>
+          <button
+            aria-label={sidebarIsCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
+            className="sidebar__collapse-button"
+            onClick={() => setSidebarIsCollapsed((isCollapsed) => !isCollapsed)}
+            title={sidebarIsCollapsed ? "Expandir menu" : "Recolher menu"}
+            type="button"
+          >
+            {sidebarIsCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
+          </button>
         </div>
 
         <nav className="sidebar__nav" aria-label="Menu principal">
-          {visibleNavigationItems.map((item) => (
+          {visibleNavigationItems.map((item) => {
+            const Icon = navigationIcons[item.route];
+
+            return (
               <button
+                aria-current={activeRoute === item.route ? "page" : undefined}
+                aria-label={item.label}
                 className={activeRoute === item.route ? "sidebar__link sidebar__link--active" : "sidebar__link"}
+                data-label={item.label}
                 key={item.route}
                 onClick={() => handleNavigation(item.route)}
+                title={item.label}
                 type="button"
               >
-                <NavigationIcon name={navigationIcons[item.route]} />
-                {item.label}
+                <Icon aria-hidden="true" className="sidebar__icon" />
+                <span className="sidebar__link-label">{item.label}</span>
               </button>
-            ))}
+            );
+          })}
         </nav>
 
         <div className="sidebar__footer">
-          <span>{user.name}</span>
-          <button className="sidebar__signout" disabled={isSigningOut} onClick={onSignOut} type="button">
-            {isSigningOut ? "Saindo..." : "Sair"}
+          <div className="sidebar-user-card">
+            <div>
+              <strong>{user.name}</strong>
+              <span>{user.email}</span>
+            </div>
+          </div>
+          <button
+            className="sidebar__signout"
+            data-label="Sair"
+            disabled={isSigningOut}
+            onClick={onSignOut}
+            title="Sair"
+            type="button"
+          >
+            <LogOut aria-hidden="true" className="sidebar__signout-icon" />
+            <span className="sidebar__signout-label">{isSigningOut ? "Saindo..." : "Sair"}</span>
           </button>
         </div>
       </aside>
@@ -172,17 +171,21 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
       <div className="app-content">{children}</div>
 
       <nav className="mobile-bottom-nav" aria-label="Menu principal mobile">
-        {bottomNavigationItems.map((item) => (
-          <button
-            className={activeRoute === item.route ? "mobile-bottom-nav__item is-active" : "mobile-bottom-nav__item"}
-            key={item.route}
-            onClick={() => handleNavigation(item.route)}
-            type="button"
-          >
-            <NavigationIcon name={navigationIcons[item.route]} />
-            <span>{item.label}</span>
-          </button>
-        ))}
+        {bottomNavigationItems.map((item) => {
+          const Icon = navigationIcons[item.route];
+
+          return (
+            <button
+              className={activeRoute === item.route ? "mobile-bottom-nav__item is-active" : "mobile-bottom-nav__item"}
+              key={item.route}
+              onClick={() => handleNavigation(item.route)}
+              type="button"
+            >
+              <Icon aria-hidden="true" className="sidebar__icon" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
 
         <button
           className={
@@ -193,30 +196,30 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
           onClick={() => setMobileMoreIsOpen((isOpen) => !isOpen)}
           type="button"
         >
-          <span aria-hidden="true" className="mobile-more-icon">
-            ...
-          </span>
+          <MoreHorizontal aria-hidden="true" className="mobile-more-icon" />
           <span>Mais</span>
         </button>
       </nav>
 
       {mobileMoreIsOpen ? (
         <div className="mobile-more-menu" id="mobile-more-menu">
-          {moreNavigationItems.map((item) => (
-            <button
-              className={activeRoute === item.route ? "mobile-more-menu__item is-active" : "mobile-more-menu__item"}
-              key={item.route}
-              onClick={() => handleNavigation(item.route)}
-              type="button"
-            >
-              <NavigationIcon name={navigationIcons[item.route]} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {moreNavigationItems.map((item) => {
+            const Icon = navigationIcons[item.route];
+
+            return (
+              <button
+                className={activeRoute === item.route ? "mobile-more-menu__item is-active" : "mobile-more-menu__item"}
+                key={item.route}
+                onClick={() => handleNavigation(item.route)}
+                type="button"
+              >
+                <Icon aria-hidden="true" className="sidebar__icon" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
           <button className="mobile-more-menu__item mobile-more-menu__item--danger" disabled={isSigningOut} onClick={onSignOut} type="button">
-            <span aria-hidden="true" className="mobile-more-icon">
-              x
-            </span>
+            <LogOut aria-hidden="true" className="mobile-more-icon" />
             <span>{isSigningOut ? "Saindo..." : "Sair"}</span>
           </button>
         </div>

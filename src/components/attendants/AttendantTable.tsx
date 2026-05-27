@@ -28,7 +28,7 @@ export function AttendantTable({
     <section className="clients-table-panel attendant-list-panel">
       {attendants.length === 0 ? (
         <div className="clients-empty-state">
-          <strong>Nenhum usuario encontrado</strong>
+          <strong>Nenhum usuário encontrado</strong>
           <span>Tente ajustar a busca ou limpar os filtros.</span>
         </div>
       ) : (
@@ -38,7 +38,7 @@ export function AttendantTable({
             <span>Perfil</span>
             <span>Status</span>
             <span>Acesso</span>
-            <span>Acoes</span>
+            <span>Ações</span>
           </div>
 
           {attendants.map((attendant) => {
@@ -50,8 +50,8 @@ export function AttendantTable({
             return (
               <article className="attendant-list-row" key={attendant.id}>
                 <button className="attendant-name-button" onClick={() => onViewDetails(attendant)} type="button">
-                  <strong>{attendant.name || "Nao informado"}</strong>
-                  <span>{attendant.email || "E-mail nao informado"}</span>
+                  <strong>{attendant.name || "Não informado"}</strong>
+                  <span>{attendant.email || "E-mail não informado"}</span>
                   <span>{attendant.phone || "Sem telefone"}</span>
                 </button>
 
@@ -75,13 +75,13 @@ export function AttendantTable({
                     Ver ficha
                   </button>
                   <details className="client-actions-menu">
-                    <summary>Acoes</summary>
+                    <summary>Ações</summary>
                     <div className="client-actions-menu__content">
                       <button onClick={() => onEdit(attendant)} type="button">
                         Editar dados
                       </button>
                       <button onClick={() => onChangePermission(attendant)} type="button">
-                        Alterar permissao
+                        Alterar permissão
                       </button>
                       <button onClick={() => onResetPassword(attendant)} type="button">
                         Redefinir senha
@@ -90,7 +90,7 @@ export function AttendantTable({
                         className={isActive ? "client-actions-menu__danger" : undefined}
                         disabled={isCurrentUser && isActive}
                         onClick={() => onToggleStatus(attendant)}
-                        title={isCurrentUser && isActive ? "Voce nao pode desativar seu proprio acesso." : undefined}
+                        title={isCurrentUser && isActive ? "Você não pode desativar seu próprio acesso." : undefined}
                         type="button"
                       >
                         {isActive ? "Desativar acesso" : "Reativar acesso"}

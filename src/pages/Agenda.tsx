@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AgendaGrid } from "../components/agenda/AgendaGrid";
 import { AgendaMobileList } from "../components/agenda/AgendaMobileList";
 import { AgendaToolbar } from "../components/agenda/AgendaToolbar";
 import { AppointmentCreateModal } from "../components/agenda/AppointmentCreateModal";
 import { AppointmentDetailsModal } from "../components/agenda/AppointmentDetailsModal";
 import { ScheduleBlockModal } from "../components/agenda/ScheduleBlockModal";
+import { SearchInput } from "../components/ui/SearchInput";
 import { addDays, formatDateForQuery, formatTime, generateTimeSlots, timeToMinutes } from "../lib/agenda";
 import { supabase } from "../lib/supabase";
 import type { Appointment, Client, Professional, ScheduleBlock, SelectedAgendaSlot } from "../types/agenda";
@@ -51,6 +52,21 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(year, month - 1, day));
 }
 
+function readStoredProfessionalFilter() {
+  const rawValue = window.localStorage.getItem("agendaSelectedProfessionals");
+
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+    return Array.isArray(parsedValue) ? parsedValue.filter((value): value is string => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export function Agenda({ user }: AgendaProps) {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [now, setNow] = useState(() => new Date());
@@ -59,6 +75,9 @@ export function Agenda({ user }: AgendaProps) {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [quickFilter, setQuickFilter] = useState<AgendaQuickFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProfessionalIds, setSelectedProfessionalIds] = useState<string[]>(readStoredProfessionalFilter);
+  const [professionalFilterIsOpen, setProfessionalFilterIsOpen] = useState(false);
+  const [professionalFilterSearch, setProfessionalFilterSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<SelectedAgendaSlot | null>(null);
@@ -67,6 +86,7 @@ export function Agenda({ user }: AgendaProps) {
   const [blockModalMode, setBlockModalMode] = useState<"time" | "professional" | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const professionalFilterRef = useRef<HTMLDivElement | null>(null);
   const timeSlots = useMemo(() => generateTimeSlots("08:00", "20:00", 30), []);
   const canManageBlocks = user.role === "Administrador";
 
@@ -106,6 +126,45 @@ export function Agenda({ user }: AgendaProps) {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("agendaSelectedProfessionals", JSON.stringify(selectedProfessionalIds));
+  }, [selectedProfessionalIds]);
+
+  useEffect(() => {
+    if (professionals.length === 0 || selectedProfessionalIds.length === 0) {
+      return;
+    }
+
+    const availableProfessionalIds = new Set(professionals.map((professional) => professional.id));
+    setSelectedProfessionalIds((currentIds) => currentIds.filter((professionalId) => availableProfessionalIds.has(professionalId)));
+  }, [professionals, selectedProfessionalIds.length]);
+
+  useEffect(() => {
+    if (!professionalFilterIsOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (professionalFilterRef.current && !professionalFilterRef.current.contains(event.target as Node)) {
+        setProfessionalFilterIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setProfessionalFilterIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [professionalFilterIsOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -269,6 +328,52 @@ export function Agenda({ user }: AgendaProps) {
     return [];
   }, [quickFilter, searchedBlocks]);
 
+  const selectedProfessionalIdSet = useMemo(() => new Set(selectedProfessionalIds), [selectedProfessionalIds]);
+  const hasProfessionalFilter = selectedProfessionalIds.length > 0;
+  const visibleProfessionals = useMemo(() => {
+    if (!hasProfessionalFilter) {
+      return professionals;
+    }
+
+    return professionals.filter((professional) => selectedProfessionalIdSet.has(professional.id));
+  }, [hasProfessionalFilter, professionals, selectedProfessionalIdSet]);
+  const visibleProfessionalIdSet = useMemo(
+    () => new Set(visibleProfessionals.map((professional) => professional.id)),
+    [visibleProfessionals],
+  );
+  const visibleAppointments = useMemo(
+    () => filteredAppointments.filter((appointment) => visibleProfessionalIdSet.has(appointment.professional_id)),
+    [filteredAppointments, visibleProfessionalIdSet],
+  );
+  const visibleBlocks = useMemo(
+    () =>
+      filteredBlocks.filter((block) => !block.professional_id || visibleProfessionalIdSet.has(block.professional_id)),
+    [filteredBlocks, visibleProfessionalIdSet],
+  );
+  const professionalFilterSearchValue = normalizeSearch(professionalFilterSearch);
+  const professionalFilterOptions = useMemo(() => {
+    if (!professionalFilterSearchValue) {
+      return professionals;
+    }
+
+    return professionals.filter((professional) =>
+      normalizeSearch([professional.name, professional.work_description, professional.work_type].filter(Boolean).join(" ")).includes(
+        professionalFilterSearchValue,
+      ),
+    );
+  }, [professionalFilterSearchValue, professionals]);
+  const professionalFilterLabel = useMemo(() => {
+    if (!hasProfessionalFilter) {
+      return "Todos os profissionais";
+    }
+
+    if (selectedProfessionalIds.length === 1) {
+      return professionals.find((professional) => professional.id === selectedProfessionalIds[0])?.name ?? "1 profissional";
+    }
+
+    return `${selectedProfessionalIds.length} profissionais`;
+  }, [hasProfessionalFilter, professionals, selectedProfessionalIds]);
+
   const finishedCount = activeAppointments.filter((appointment) => appointment.status_code === "completed").length;
   const scheduledOrConfirmedCount = activeAppointments.filter((appointment) =>
     ["scheduled", "confirmed"].includes(appointment.status_code ?? ""),
@@ -287,16 +392,28 @@ export function Agenda({ user }: AgendaProps) {
       .sort((left, right) => timeToMinutes(left.start_time) - timeToMinutes(right.start_time))
       .find((appointment) => timeToMinutes(appointment.start_time) >= currentMinutes);
   }, [activeAppointments, now, selectedDateIsPast, selectedDateIsToday]);
-  const hasActiveViewFilter = quickFilter !== "all" || searchValue.length > 0;
-  const hasVisibleItems = filteredAppointments.length > 0 || filteredBlocks.length > 0;
+  const hasStatusOrSearchFilter = quickFilter !== "all" || searchValue.length > 0;
+  const hasActiveViewFilter = hasStatusOrSearchFilter || hasProfessionalFilter;
+  const hasVisibleItems =
+    visibleAppointments.length > 0 ||
+    visibleBlocks.length > 0 ||
+    (!hasStatusOrSearchFilter && hasProfessionalFilter && visibleProfessionals.length > 0);
   const searchIsActive = searchValue.length > 0;
-  const searchResultCount = filteredAppointments.length;
-  const highlightedAppointmentIds = searchIsActive ? filteredAppointments.map((appointment) => appointment.id) : [];
+  const searchResultCount = visibleAppointments.length;
+  const highlightedAppointmentIds = searchIsActive ? visibleAppointments.map((appointment) => appointment.id) : [];
   const emptyViewMessage = searchValue
     ? "Nenhum agendamento encontrado para esta busca."
     : quickFilter !== "all"
       ? "Nenhum item encontrado para este filtro."
       : "Nenhum agendamento para este dia. Use um horário livre para criar um novo agendamento.";
+
+  function toggleProfessionalSelection(professionalId: string) {
+    setSelectedProfessionalIds((currentIds) =>
+      currentIds.includes(professionalId)
+        ? currentIds.filter((currentId) => currentId !== professionalId)
+        : [...currentIds, professionalId],
+    );
+  }
 
   return (
     <main className="agenda-page">
@@ -358,27 +475,94 @@ export function Agenda({ user }: AgendaProps) {
           </section>
 
           <section className="agenda-quick-controls" aria-label="Busca e filtros da agenda">
-            <label className="agenda-search">
-              <input
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Cliente, serviço ou profissional"
-                value={searchTerm}
-              />
-            </label>
-            <div className="agenda-filter-chips" role="tablist" aria-label="Filtros rápidos">
-              {agendaFilterOptions.map((option) => (
+            <SearchInput
+              className="agenda-search"
+              mobilePlaceholder="Buscar na agenda"
+              onChange={setSearchTerm}
+              placeholder="Cliente, serviço ou profissional"
+              value={searchTerm}
+            />
+            <div className="agenda-quick-controls__filters">
+              <div className="agenda-filter-chips" role="tablist" aria-label="Filtros rápidos">
+                {agendaFilterOptions.map((option) => (
+                  <button
+                    aria-selected={quickFilter === option.value}
+                    className={quickFilter === option.value ? "is-active" : ""}
+                    key={option.value}
+                    onClick={() => setQuickFilter(option.value)}
+                    role="tab"
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="agenda-professional-filter" ref={professionalFilterRef}>
                 <button
-                  aria-selected={quickFilter === option.value}
-                  className={quickFilter === option.value ? "is-active" : ""}
-                  key={option.value}
-                  onClick={() => setQuickFilter(option.value)}
-                  role="tab"
+                  aria-expanded={professionalFilterIsOpen}
+                  className={hasProfessionalFilter ? "agenda-professional-filter__button is-active" : "agenda-professional-filter__button"}
+                  onClick={() => setProfessionalFilterIsOpen((isOpen) => !isOpen)}
                   type="button"
                 >
-                  {option.label}
+                  {professionalFilterLabel}
+                  <span aria-hidden="true" className="agenda-professional-filter__chevron" />
                 </button>
-              ))}
+                {professionalFilterIsOpen ? (
+                  <div className="agenda-professional-filter__popover">
+                    <div className="agenda-professional-filter__header">
+                      <strong>Profissionais</strong>
+                      <button onClick={() => setSelectedProfessionalIds([])} type="button">
+                        Limpar
+                      </button>
+                    </div>
+                    <SearchInput
+                      className="agenda-professional-filter__search"
+                      onChange={setProfessionalFilterSearch}
+                      placeholder="Buscar profissional"
+                      value={professionalFilterSearch}
+                    />
+                    <div className="agenda-professional-filter__list">
+                      <button
+                        className={!hasProfessionalFilter ? "is-selected" : ""}
+                        onClick={() => setSelectedProfessionalIds([])}
+                        type="button"
+                      >
+                        <span aria-hidden="true" className="agenda-professional-filter__check" />
+                        Todos
+                      </button>
+                      {professionalFilterOptions.map((professional) => {
+                        const isSelected = selectedProfessionalIdSet.has(professional.id);
+
+                        return (
+                          <button
+                            className={isSelected ? "is-selected" : ""}
+                            key={professional.id}
+                            onClick={() => toggleProfessionalSelection(professional.id)}
+                            type="button"
+                          >
+                            <span aria-hidden="true" className="agenda-professional-filter__check" />
+                            {professional.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
+            {hasProfessionalFilter ? (
+              <div className="agenda-selected-professionals" aria-label="Profissionais filtrados">
+                <span>Profissionais:</span>
+                {visibleProfessionals.map((professional) => (
+                  <button key={professional.id} onClick={() => toggleProfessionalSelection(professional.id)} type="button">
+                    {professional.name} <span aria-hidden="true">x</span>
+                  </button>
+                ))}
+                <button className="agenda-selected-professionals__clear" onClick={() => setSelectedProfessionalIds([])} type="button">
+                  Limpar
+                </button>
+              </div>
+            ) : null}
           </section>
 
           {searchIsActive ? (
@@ -403,7 +587,7 @@ export function Agenda({ user }: AgendaProps) {
 
               {searchResultCount > 0 ? (
                 <div className="agenda-search-results__list">
-                  {filteredAppointments.map((appointment) => (
+                  {visibleAppointments.map((appointment) => (
                     <article className="agenda-search-result-item" key={appointment.id}>
                       <div>
                         <strong>{appointment.client_name ?? "Cliente sem nome"}</strong>
@@ -453,22 +637,22 @@ export function Agenda({ user }: AgendaProps) {
       ) : (
         <>
           <AgendaMobileList
-            appointments={filteredAppointments}
+            appointments={visibleAppointments}
             onAppointmentClick={setSelectedAppointment}
             onEmptySlotClick={(professional, startTime) => setSelectedSlot({ professional, startTime })}
-            professionals={professionals}
-            scheduleBlocks={filteredBlocks}
-            showFreeSlots={!hasActiveViewFilter}
+            professionals={visibleProfessionals}
+            scheduleBlocks={visibleBlocks}
+            showFreeSlots={!hasStatusOrSearchFilter}
             timeSlots={timeSlots}
           />
           <AgendaGrid
-            appointments={filteredAppointments}
+            appointments={visibleAppointments}
             currentTime={selectedDateIsToday ? getCurrentTimeLabel(now) : null}
             highlightedAppointmentIds={highlightedAppointmentIds}
             onAppointmentClick={setSelectedAppointment}
             onEmptySlotClick={(professional, startTime) => setSelectedSlot({ professional, startTime })}
-            professionals={professionals}
-            scheduleBlocks={filteredBlocks}
+            professionals={visibleProfessionals}
+            scheduleBlocks={visibleBlocks}
             timeSlots={timeSlots}
           />
         </>

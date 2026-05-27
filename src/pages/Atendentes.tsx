@@ -258,7 +258,7 @@ export function Atendentes({ user }: AtendentesProps) {
 
   async function verifyAdminPassword(password: string) {
     if (!user.email) {
-      setErrorMessage("Nao foi possivel validar o administrador logado.");
+      setErrorMessage("Não foi possível validar o administrador logado.");
       return false;
     }
 
@@ -278,12 +278,12 @@ export function Atendentes({ user }: AtendentesProps) {
 
   function validateCreate(values: AttendantFormValues) {
     if (!values.name.trim()) {
-      setErrorMessage("Nome completo e obrigatorio.");
+      setErrorMessage("Nome completo é obrigatório.");
       return false;
     }
 
     if (!values.email.trim()) {
-      setErrorMessage("E-mail e obrigatorio.");
+      setErrorMessage("E-mail é obrigatório.");
       return false;
     }
 
@@ -293,7 +293,7 @@ export function Atendentes({ user }: AtendentesProps) {
     }
 
     if (!values.role_id) {
-      setErrorMessage("Perfil e obrigatorio.");
+      setErrorMessage("Perfil é obrigatório.");
       return false;
     }
 
@@ -307,7 +307,7 @@ export function Atendentes({ user }: AtendentesProps) {
 
   function validateEdit(values: AttendantFormValues) {
     if (!values.name.trim()) {
-      setErrorMessage("Nome completo e obrigatorio.");
+      setErrorMessage("Nome completo é obrigatório.");
       return false;
     }
 
@@ -329,7 +329,7 @@ export function Atendentes({ user }: AtendentesProps) {
     const roleName = getRoleName(values.role_id);
 
     if (!roleName) {
-      setErrorMessage("Perfil e obrigatorio.");
+      setErrorMessage("Perfil é obrigatório.");
       setIsSaving(false);
       return;
     }
@@ -379,7 +379,7 @@ export function Atendentes({ user }: AtendentesProps) {
     }
 
     if (functionData?.ok !== true) {
-      setErrorMessage("Resposta inesperada da funcao admin-create-user.");
+      setErrorMessage("Resposta inesperada da função admin-create-user.");
       setIsSaving(false);
       return;
     }
@@ -435,7 +435,7 @@ export function Atendentes({ user }: AtendentesProps) {
       }
 
       if (nextRoleName !== "Administrador" && isLastActiveAdmin(criticalAction.attendant)) {
-        setErrorMessage("Nao e possivel remover o ultimo administrador ativo.");
+        setErrorMessage("Não é possível remover o último administrador ativo.");
         setIsSaving(false);
         return;
       }
@@ -454,7 +454,7 @@ export function Atendentes({ user }: AtendentesProps) {
 
       if (error) {
         console.error(error);
-        setErrorMessage("Erro ao alterar permissao.");
+        setErrorMessage("Erro ao alterar permissão.");
         setIsSaving(false);
         return;
       }
@@ -468,13 +468,13 @@ export function Atendentes({ user }: AtendentesProps) {
 
     if (criticalAction.type === "status") {
       if (!criticalAction.nextActive && criticalAction.attendant.id === user.id) {
-        setErrorMessage("Voce nao pode desativar seu proprio acesso.");
+        setErrorMessage("Você não pode desativar seu próprio acesso.");
         setIsSaving(false);
         return;
       }
 
       if (!criticalAction.nextActive && isLastActiveAdmin(criticalAction.attendant)) {
-        setErrorMessage("Nao e possivel desativar o ultimo administrador ativo.");
+        setErrorMessage("Não é possível desativar o último administrador ativo.");
         setIsSaving(false);
         return;
       }
@@ -512,7 +512,7 @@ export function Atendentes({ user }: AtendentesProps) {
 
   function handleToggleStatus(attendant: AttendantRecord) {
     if (attendant.id === user.id && attendant.is_active !== false) {
-      setErrorMessage("Voce nao pode desativar seu proprio acesso.");
+      setErrorMessage("Você não pode desativar seu próprio acesso.");
       return;
     }
 
@@ -532,7 +532,7 @@ export function Atendentes({ user }: AtendentesProps) {
       <header className="clients-header">
         <div>
           <h1>Atendentes</h1>
-          <p>Gerencie usuarios, permissoes e acesso ao sistema</p>
+          <p>Gerencie usuários, permissões e acesso ao sistema</p>
         </div>
 
         <button className="add-button" onClick={() => setModalMode("create")} type="button">
@@ -578,7 +578,7 @@ export function Atendentes({ user }: AtendentesProps) {
         <section className="clients-table-panel">
           <div className="clients-empty-state">
             <strong>Nenhum atendente cadastrado</strong>
-            <span>Adicione usuarios para permitir acesso ao sistema.</span>
+            <span>Adicione usuários para permitir acesso ao sistema.</span>
             <button className="add-button" onClick={() => setModalMode("create")} type="button">
               Adicionar atendente
             </button>

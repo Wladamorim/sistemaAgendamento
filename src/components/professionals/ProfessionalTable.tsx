@@ -26,11 +26,11 @@ function getStatusView(professional: ProfessionalRecord, operationalStatus: stri
     };
   }
 
-  if (operationalStatus === "Sem servicos vinculados") {
+  if (operationalStatus === "Sem serviços vinculados") {
     return {
       className: "status-pill professional-status-warning",
-      label: "Sem servicos",
-      subtext: "Configuracao pendente",
+      label: "Sem serviços",
+      subtext: "Configuração pendente",
     };
   }
 
@@ -52,7 +52,7 @@ function getStatusView(professional: ProfessionalRecord, operationalStatus: stri
 
   return {
     className: "status-pill status-pill--active",
-    label: "Disponivel hoje",
+      label: "Disponível hoje",
     subtext: "",
   };
 }
@@ -95,16 +95,16 @@ export function ProfessionalTable({
           <div className="professional-list__header" aria-hidden="true">
             <span>Profissional</span>
             <span>Especialidade</span>
-            <span>Servicos</span>
-            <span>Situacao</span>
-            <span>Acoes</span>
+            <span>Serviços</span>
+            <span>Situação</span>
+            <span>Ações</span>
           </div>
 
           {professionals.map((professional) => {
             const linkedServices = linkedServicesByProfessional[professional.id] ?? [];
             const summary = professionalSummaries[professional.id];
             const operationalStatus =
-              professional.is_active === false ? "Inativo" : summary?.operationalStatus ?? "Disponivel hoje";
+              professional.is_active === false ? "Inativo" : summary?.operationalStatus ?? "Disponível hoje";
             const statusView = getStatusView(professional, operationalStatus, summary?.appointmentsToday ?? 0);
 
             return (
@@ -121,15 +121,15 @@ export function ProfessionalTable({
 
                 <div className="professional-list-row__specialty">
                   <strong>{professional.work_type || "Sem especialidade"}</strong>
-                  <span>{professional.work_description || "Descricao nao informada"}</span>
+                  <span>{professional.work_description || "Descrição não informada"}</span>
                 </div>
 
                 <div className="professional-list-row__services">
-                  <strong>{linkedServices.length} servico(s)</strong>
+                  <strong>{linkedServices.length} serviço(s)</strong>
                   {linkedServices.length > 0 ? (
                     getServiceChips(linkedServices)
                   ) : (
-                    <span className="professional-config-alert">Sem servicos vinculados</span>
+                    <span className="professional-config-alert">Sem serviços vinculados</span>
                   )}
                 </div>
 
@@ -143,7 +143,7 @@ export function ProfessionalTable({
                     Ver ficha
                   </button>
                   <details className="client-actions-menu">
-                    <summary>Acoes</summary>
+                    <summary>Ações</summary>
                     <div className="client-actions-menu__content">
                       <button onClick={() => onViewAgenda(professional)} type="button">
                         Ver agenda
@@ -157,7 +157,7 @@ export function ProfessionalTable({
                             Bloquear agenda
                           </button>
                           <button onClick={() => onManageServices(professional)} type="button">
-                            Gerenciar servicos
+                            Gerenciar serviços
                           </button>
                           <button className="client-actions-menu__danger" onClick={() => onDeactivate(professional)} type="button">
                             Desativar

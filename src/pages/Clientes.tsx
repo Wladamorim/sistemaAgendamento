@@ -29,7 +29,7 @@ const clientFilterOptions: { label: string; value: ClientFilterKey }[] = [
 ];
 
 const secondaryClientFilterOptions: { label: string; value: ClientFilterKey }[] = [
-  { label: "Com atendimento concluido", value: "completed" },
+  { label: "Com atendimento concluído", value: "completed" },
   { label: "Cadastrados recentemente", value: "recent" },
 ];
 
@@ -233,7 +233,7 @@ export function Clientes({ user }: ClientesProps) {
       if (appointmentsError) {
         console.error("CLIENT APPOINTMENTS ERROR:", appointmentsError);
         setClientAppointments([]);
-        setErrorMessage("Clientes carregados, mas nao foi possivel carregar o historico de agendamentos.");
+        setErrorMessage("Clientes carregados, mas não foi possível carregar o histórico de agendamentos.");
         setIsLoading(false);
         return;
       }
@@ -304,7 +304,7 @@ export function Clientes({ user }: ClientesProps) {
 
   async function handleCreateClient(values: ClientFormValues) {
     if (!values.full_name.trim() || !values.phone.trim()) {
-      setErrorMessage("Nome completo e numero de telefone sao obrigatorios.");
+      setErrorMessage("Nome completo e número de telefone são obrigatórios.");
       return;
     }
 
@@ -337,12 +337,12 @@ export function Clientes({ user }: ClientesProps) {
     }
 
     if (!values.phone.trim()) {
-      setErrorMessage("Numero de telefone e obrigatorio.");
+      setErrorMessage("Número de telefone é obrigatório.");
       return;
     }
 
     if (userIsAdmin && !values.full_name.trim()) {
-      setErrorMessage("Nome completo e obrigatorio.");
+      setErrorMessage("Nome completo é obrigatório.");
       return;
     }
 
@@ -413,7 +413,7 @@ export function Clientes({ user }: ClientesProps) {
       <header className="clients-header">
         <div>
           <h1>Clientes</h1>
-          <p>Gerencie clientes, historico e proximos agendamentos</p>
+          <p>Gerencie clientes, histórico e próximos agendamentos</p>
         </div>
       </header>
 
@@ -506,7 +506,7 @@ export function Clientes({ user }: ClientesProps) {
       {clientToDeactivate ? (
         <ConfirmDialog
           confirmLabel="Desativar"
-          message="Deseja desativar este cliente? Ele nao sera removido permanentemente, apenas ficara inativo."
+          message="Deseja desativar este cliente? Ele não será removido permanentemente, apenas ficará inativo."
           onCancel={() => setClientToDeactivate(null)}
           onConfirm={handleDeactivateClient}
           title="Desativar cliente"

@@ -10,14 +10,14 @@ function formatDateValue(value: string) {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(`${value}T00:00:00`));
 }
 
-export function MovementTable({ appointments, title = "Atendimentos do periodo" }: MovementTableProps) {
+export function MovementTable({ appointments, title = "Atendimentos do período" }: MovementTableProps) {
   return (
     <section className="dashboard-panel movement-table-panel">
       <h2>{title}</h2>
       {appointments.length === 0 ? (
         <div className="movement-empty-state">
-          <strong>Nenhuma movimentacao encontrada</strong>
-          <span>Nao ha atendimentos registrados para este periodo.</span>
+          <strong>Nenhuma movimentação encontrada</strong>
+          <span>Não há atendimentos registrados para este período.</span>
         </div>
       ) : (
         <div className="movement-table-wrap">
@@ -26,7 +26,7 @@ export function MovementTable({ appointments, title = "Atendimentos do periodo" 
               <tr>
                 <th>Data/Hora</th>
                 <th>Cliente</th>
-                <th>Servico</th>
+                <th>Serviço</th>
                 <th>Profissional</th>
                 <th>Pagamento</th>
                 <th>Valor</th>
@@ -42,9 +42,9 @@ export function MovementTable({ appointments, title = "Atendimentos do periodo" 
                       {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
                     </span>
                   </td>
-                  <td data-label="Cliente">{appointment.client_name ?? "Nao informado"}</td>
-                  <td data-label="Servico">{appointment.procedure_name ?? "Nao informado"}</td>
-                  <td data-label="Profissional">{appointment.professional_name ?? "Nao informado"}</td>
+                  <td data-label="Cliente">{appointment.client_name ?? "Não informado"}</td>
+                  <td data-label="Serviço">{appointment.procedure_name ?? "Não informado"}</td>
+                  <td data-label="Profissional">{appointment.professional_name ?? "Não informado"}</td>
                   <td data-label="Pagamento">{getPaymentLabel(appointment.payment_method)}</td>
                   <td data-label="Valor">
                     <strong>{formatCurrency(getAppointmentProductionAmount(appointment))}</strong>

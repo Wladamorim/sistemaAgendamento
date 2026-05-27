@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { isAdmin } from "../components/AppShell";
 import { RestrictedAccess } from "../components/RestrictedAccess";
+import { SearchInput } from "../components/ui/SearchInput";
 import {
   comboLinkedTypeLabels,
   comboPaymentOptions,
@@ -261,7 +262,7 @@ export function Combos({ user }: CombosProps) {
         categoriesResult.error;
       console.error("COMBOS LOAD ERROR:", error);
       setErrorMessage(
-        "Nao foi possivel carregar Combos. Verifique se a migration 20260526000000_create_combos.sql foi aplicada no Supabase.",
+        "Não foi possível carregar Combos. Verifique se a migration 20260526000000_create_combos.sql foi aplicada no Supabase.",
       );
       setIsLoading(false);
       return;
@@ -331,7 +332,7 @@ export function Combos({ user }: CombosProps) {
     }
 
     if (templateForm.linked_type === "procedure" && !templateForm.procedure_id) {
-      setErrorMessage("Selecione o servico vinculado ao combo.");
+      setErrorMessage("Selecione o serviço vinculado ao combo.");
       return;
     }
 
@@ -471,7 +472,7 @@ export function Combos({ user }: CombosProps) {
     const totalSessions = Number(clientComboEditForm.total_sessions);
 
     if (!totalSessions || totalSessions < editingClientCombo.used_sessions) {
-      setErrorMessage("O total de sessoes nao pode ser menor que as sessoes ja usadas.");
+      setErrorMessage("O total de sessões não pode ser menor que as sessões já usadas.");
       return;
     }
 
@@ -639,15 +640,12 @@ export function Combos({ user }: CombosProps) {
 
       <section className="clients-toolbar--operational combos-toolbar">
         <div className="clients-toolbar-top">
-          <label className="client-search">
-            <span>Busca</span>
-            <input
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar combo, cliente, servico ou categoria"
-              type="search"
-              value={searchTerm}
-            />
-          </label>
+          <SearchInput
+            className="client-search"
+            onChange={setSearchTerm}
+            placeholder="Buscar combo, cliente ou serviço"
+            value={searchTerm}
+          />
         </div>
 
         <div className="combo-tab-list" role="tablist" aria-label="Areas de combos">
@@ -703,15 +701,15 @@ export function Combos({ user }: CombosProps) {
                 <span>Combo</span>
                 <span>Vinculo</span>
                 <span>Sessoes/valor</span>
-                <span>Situacao</span>
-                <span>Acoes</span>
+                <span>Situação</span>
+                <span>Ações</span>
               </div>
 
               {filteredTemplates.map((template) => (
                 <article className="combo-list-row" key={template.id}>
                   <button className="combo-list-row__name" onClick={() => setSelectedTemplate(template)} type="button">
                     <strong>{template.name}</strong>
-                    <span>{template.description || "Sem descricao"}</span>
+                    <span>{template.description || "Sem descrição"}</span>
                   </button>
                   <div className="combo-list-row__meta">
                     <strong>{comboLinkedTypeLabels[template.linked_type]}</strong>
@@ -733,7 +731,7 @@ export function Combos({ user }: CombosProps) {
                       Ver detalhes
                     </button>
                     <details className="client-actions-menu">
-                      <summary>Acoes</summary>
+                      <summary>Ações</summary>
                       <div className="client-actions-menu__content">
                         <button onClick={() => openEditTemplateForm(template)} type="button">
                           Editar
@@ -765,14 +763,14 @@ export function Combos({ user }: CombosProps) {
                 <span>Cliente/combo</span>
                 <span>Vinculo</span>
                 <span>Saldo/validade</span>
-                <span>Situacao</span>
-                <span>Acoes</span>
+                <span>Situação</span>
+                <span>Ações</span>
               </div>
 
               {filteredClientCombos.map((combo) => (
                 <article className="combo-list-row" key={combo.id}>
                   <button className="combo-list-row__name" onClick={() => setSelectedClientCombo(combo)} type="button">
-                    <strong>{combo.client_name ?? "Cliente nao informado"}</strong>
+                    <strong>{combo.client_name ?? "Cliente não informado"}</strong>
                     <span>{combo.name}</span>
                   </button>
                   <div className="combo-list-row__meta">
@@ -800,10 +798,10 @@ export function Combos({ user }: CombosProps) {
                       Ver combo
                     </button>
                     <details className="client-actions-menu">
-                      <summary>Acoes</summary>
+                      <summary>Ações</summary>
                       <div className="client-actions-menu__content">
                         <button onClick={() => setSelectedClientCombo(combo)} type="button">
-                          Historico de uso
+                          Histórico de uso
                         </button>
                         {combo.effective_status !== "cancelled" ? (
                           <button onClick={() => openEditClientCombo(combo)} type="button">
@@ -859,13 +857,13 @@ export function Combos({ user }: CombosProps) {
                   }
                   value={templateForm.linked_type}
                 >
-                  <option value="procedure">Servico especifico</option>
+                  <option value="procedure">Serviço específico</option>
                   <option value="category">Categoria/area</option>
                 </select>
               </label>
               {templateForm.linked_type === "procedure" ? (
                 <label className="field-label">
-                  Servico
+                  Serviço
                   <select
                     onChange={(event) => setTemplateForm((form) => ({ ...form, procedure_id: event.target.value }))}
                     value={templateForm.procedure_id}
@@ -922,14 +920,14 @@ export function Combos({ user }: CombosProps) {
                 />
               </label>
               <label className="field-label modal-field-wide">
-                Descricao
+                Descrição
                 <textarea
                   onChange={(event) => setTemplateForm((form) => ({ ...form, description: event.target.value }))}
                   value={templateForm.description}
                 />
               </label>
               <label className="field-label modal-field-wide">
-                Observacoes
+                Observações
                 <textarea
                   onChange={(event) => setTemplateForm((form) => ({ ...form, notes: event.target.value }))}
                   value={templateForm.notes}
@@ -1045,7 +1043,7 @@ export function Combos({ user }: CombosProps) {
                 </label>
               ) : null}
               <label className="field-label modal-field-wide">
-                Observacoes
+                Observações
                 <textarea
                   onChange={(event) => setClientComboForm((form) => ({ ...form, notes: event.target.value }))}
                   value={clientComboForm.notes}
@@ -1070,7 +1068,7 @@ export function Combos({ user }: CombosProps) {
             <div className="appointment-modal__header">
               <div>
                 <h2>Editar combo do cliente</h2>
-                <p>{editingClientCombo.client_name ?? "Cliente nao informado"} - {editingClientCombo.name}</p>
+                <p>{editingClientCombo.client_name ?? "Cliente não informado"} - {editingClientCombo.name}</p>
               </div>
               <button className="icon-button" onClick={() => setEditingClientCombo(null)} type="button">
                 x
@@ -1100,7 +1098,7 @@ export function Combos({ user }: CombosProps) {
                 />
               </label>
               <label className="field-label modal-field-wide">
-                Observacoes
+                Observações
                 <textarea
                   onChange={(event) => setClientComboEditForm((form) => ({ ...form, notes: event.target.value }))}
                   value={clientComboEditForm.notes}
@@ -1111,7 +1109,7 @@ export function Combos({ user }: CombosProps) {
                   Cancelar
                 </button>
                 <button className="save-button" disabled={isSaving} type="submit">
-                  {isSaving ? "Salvando..." : "Salvar alteracoes"}
+                  {isSaving ? "Salvando..." : "Salvar alterações"}
                 </button>
               </div>
             </form>
@@ -1163,12 +1161,12 @@ export function Combos({ user }: CombosProps) {
                 </div>
               </dl>
               <div className="client-notes-box">
-                <span>Descricao</span>
-                <p>{selectedTemplate.description || "Sem descricao cadastrada."}</p>
+                <span>Descrição</span>
+                <p>{selectedTemplate.description || "Sem descrição cadastrada."}</p>
               </div>
               <div className="client-notes-box">
-                <span>Observacoes</span>
-                <p>{selectedTemplate.notes || "Sem observacoes cadastradas."}</p>
+                <span>Observações</span>
+                <p>{selectedTemplate.notes || "Sem observações cadastradas."}</p>
               </div>
             </section>
           </aside>
@@ -1190,7 +1188,7 @@ export function Combos({ user }: CombosProps) {
                   {getClientComboStatus(selectedClientCombo)}
                 </span>
                 <h2>{selectedClientCombo.name}</h2>
-                <p>{selectedClientCombo.client_name ?? "Cliente nao informado"}</p>
+                <p>{selectedClientCombo.client_name ?? "Cliente não informado"}</p>
               </div>
               <button className="icon-button" onClick={() => setSelectedClientCombo(null)} type="button">
                 x
@@ -1238,21 +1236,21 @@ export function Combos({ user }: CombosProps) {
                 </div>
               </dl>
               <div className="client-notes-box">
-                <span>Observacoes</span>
-                <p>{selectedClientCombo.notes || "Sem observacoes cadastradas."}</p>
+                <span>Observações</span>
+                <p>{selectedClientCombo.notes || "Sem observações cadastradas."}</p>
               </div>
             </section>
             <section className="client-drawer-section">
-              <h3>Historico de uso</h3>
+              <h3>Histórico de uso</h3>
               {comboUsages.length === 0 ? (
-                <div className="client-panel-empty">Nenhuma sessao usada neste combo.</div>
+                <div className="client-panel-empty">Nenhuma sessão usada neste combo.</div>
               ) : (
                 <ul className="client-history-list">
                   {comboUsages.map((usage) => (
                     <li className="client-history-item" key={usage.id}>
                       <div>
-                        <strong>{usage.procedure_name ?? "Servico nao informado"}</strong>
-                        <span>{usage.professional_name ?? "Profissional nao informado"}</span>
+                        <strong>{usage.procedure_name ?? "Serviço não informado"}</strong>
+                        <span>{usage.professional_name ?? "Profissional não informado"}</span>
                       </div>
                       <div>
                         <span>
@@ -1264,10 +1262,10 @@ export function Combos({ user }: CombosProps) {
                                 month: "2-digit",
                                 year: "numeric",
                               }).format(new Date(usage.used_at))
-                            : "Data nao informada"}
+                            : "Data não informada"}
                         </span>
                         <span>
-                          {usage.sessions_used} sessao Â· Producao {formatCurrency(usage.production_value)}
+                          {usage.sessions_used} sessão · Produção {formatCurrency(usage.production_value)}
                         </span>
                       </div>
                     </li>

@@ -77,7 +77,7 @@ export function AttendantFormModal({
         <div className="appointment-modal__header">
           <div>
             <h2 id="attendant-form-title">{mode === "create" ? "Adicionar atendente" : "Editar dados"}</h2>
-            <p>{mode === "create" ? "Crie um novo acesso ao sistema" : "Atualize os dados cadastrais do usuario"}</p>
+            <p>{mode === "create" ? "Crie um novo acesso ao sistema" : "Atualize os dados cadastrais do usuário"}</p>
           </div>
           <button aria-label="Fechar" className="icon-button" onClick={onClose} type="button">
             x
@@ -128,7 +128,7 @@ export function AttendantFormModal({
           {selectedRole?.name === "Administrador" ? (
             <div className="attendant-security-warning">
               <strong>Perfil Administrador</strong>
-              <span>Este usuario tera acesso total ao sistema, incluindo financeiro e controle de usuarios.</span>
+              <span>Este usuário terá acesso total ao sistema, incluindo financeiro e controle de usuários.</span>
             </div>
           ) : null}
 
@@ -156,8 +156,8 @@ export function AttendantFormModal({
             </div>
           ) : (
             <div className="client-notes-box">
-              <span>Alteracoes criticas</span>
-              <p>Use as acoes "Alterar permissao" e "Desativar/Reativar acesso" para mudancas protegidas por senha.</p>
+              <span>Alterações críticas</span>
+              <p>Use as ações "Alterar permissão" e "Desativar/Reativar acesso" para mudanças protegidas por senha.</p>
             </div>
           )}
         </div>

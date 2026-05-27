@@ -37,8 +37,8 @@ const professionalFilterOptions: { label: string; value: ProfessionalFilterKey }
   { label: "Todos", value: "all" },
   { label: "Ativos", value: "active" },
   { label: "Inativos", value: "inactive" },
-  { label: "Com servicos", value: "with_services" },
-  { label: "Sem servicos", value: "without_services" },
+  { label: "Com serviços", value: "with_services" },
+  { label: "Sem serviços", value: "without_services" },
   { label: "Com agenda hoje", value: "today_schedule" },
   { label: "Bloqueados hoje", value: "blocked_today" },
 ];
@@ -52,7 +52,7 @@ const emptyProfessionalSummary: ProfessionalOperationalSummary = {
   history: [],
   monthlyRevenue: 0,
   nextAppointments: [],
-  operationalStatus: "Disponivel hoje",
+  operationalStatus: "Disponível hoje",
 };
 
 function normalizeSearch(value: string) {
@@ -158,12 +158,12 @@ function buildProfessionalSummaries(
       professional.is_active === false
         ? "Inativo"
         : linkedServices.length === 0
-          ? "Sem servicos vinculados"
+          ? "Sem serviços vinculados"
           : blocksToday.length > 0
             ? "Bloqueado hoje"
             : activeToday.length > 0
               ? "Com atendimentos hoje"
-              : "Disponivel hoje";
+              : "Disponível hoje";
 
     summaries[professional.id] = {
       appointmentsToday: activeToday.length,
@@ -363,7 +363,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
 
       if (servicesResult.error) {
         console.error("PROFESSIONAL SERVICES ERROR:", servicesResult.error);
-        setErrorMessage("Profissionais carregados, mas nao foi possivel carregar os servicos.");
+        setErrorMessage("Profissionais carregados, mas não foi possível carregar os serviços.");
       } else {
         setAllServices((servicesResult.data ?? []) as ProfessionalServiceRecord[]);
       }
@@ -371,7 +371,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
       if (linksResult.error) {
         console.error("PROFESSIONAL LINKS ERROR:", linksResult.error);
         setLinkedServicesByProfessional({});
-        setErrorMessage("Profissionais carregados, mas nao foi possivel carregar os vinculos de servicos.");
+        setErrorMessage("Profissionais carregados, mas não foi possível carregar os vínculos de serviços.");
       } else {
         setLinkedServicesByProfessional(
           buildLinkedServicesByProfessional((linksResult.data ?? []) as unknown as ProcedureProfessionalRow[]),
@@ -381,7 +381,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
       if (appointmentsResult.error) {
         console.error("PROFESSIONAL APPOINTMENTS ERROR:", appointmentsResult.error);
         setAppointments([]);
-        setErrorMessage("Profissionais carregados, mas nao foi possivel carregar os agendamentos.");
+        setErrorMessage("Profissionais carregados, mas não foi possível carregar os agendamentos.");
       } else {
         setAppointments((appointmentsResult.data ?? []) as ProfessionalAppointmentRecord[]);
       }
@@ -389,7 +389,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
       if (blocksResult.error) {
         console.error("PROFESSIONAL BLOCKS ERROR:", blocksResult.error);
         setScheduleBlocks([]);
-        setErrorMessage("Profissionais carregados, mas nao foi possivel carregar os bloqueios.");
+        setErrorMessage("Profissionais carregados, mas não foi possível carregar os bloqueios.");
       } else {
         setScheduleBlocks((blocksResult.data ?? []) as ProfessionalScheduleBlock[]);
       }
@@ -466,17 +466,17 @@ export function Profissionais({ user }: ProfissionaisProps) {
 
   function validateProfessional(values: ProfessionalFormValues) {
     if (!values.name.trim()) {
-      setErrorMessage("Nome do profissional e obrigatorio.");
+      setErrorMessage("Nome do profissional é obrigatório.");
       return false;
     }
 
     if (!values.work_description.trim()) {
-      setErrorMessage("O que ele faz e obrigatorio.");
+      setErrorMessage("O que ele faz é obrigatório.");
       return false;
     }
 
     if (!values.work_type.trim()) {
-      setErrorMessage("Tipo de trabalho e obrigatorio.");
+      setErrorMessage("Tipo de trabalho é obrigatório.");
       return false;
     }
 
@@ -599,7 +599,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
 
       if (deleteError) {
         console.error("DELETE PROFESSIONAL LINKS ERROR:", deleteError);
-        setErrorMessage("Erro ao atualizar servicos do profissional.");
+        setErrorMessage("Erro ao atualizar serviços do profissional.");
         setIsSavingLinks(false);
         return;
       }
@@ -615,7 +615,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
 
       if (insertError) {
         console.error("INSERT PROFESSIONAL LINKS ERROR:", insertError);
-        setErrorMessage("Erro ao atualizar servicos do profissional.");
+        setErrorMessage("Erro ao atualizar serviços do profissional.");
         setIsSavingLinks(false);
         return;
       }
@@ -624,7 +624,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
     setIsSavingLinks(false);
     setServicesProfessional(null);
     setReloadKey((current) => current + 1);
-    showToast("Servicos do profissional atualizados com sucesso.");
+    showToast("Serviços do profissional atualizados com sucesso.");
   }
 
   return (
@@ -632,7 +632,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
       <header className="clients-header">
         <div>
           <h1>Profissionais</h1>
-          <p>Visualize e gerencie a equipe, servicos vinculados e disponibilidade</p>
+          <p>Visualize e gerencie a equipe, serviços vinculados e disponibilidade</p>
         </div>
       </header>
 
@@ -740,7 +740,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
       {professionalToDeactivate ? (
         <ConfirmDialog
           confirmLabel="Desativar"
-          message="Deseja desativar este profissional? Ele nao sera removido permanentemente, apenas ficara inativo."
+          message="Deseja desativar este profissional? Ele não será removido permanentemente, apenas ficará inativo."
           onCancel={() => setProfessionalToDeactivate(null)}
           onConfirm={handleDeactivateProfessional}
           title="Desativar profissional"

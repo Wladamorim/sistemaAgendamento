@@ -21,7 +21,7 @@ interface ServiceSidePanelProps {
 
 function formatReturn(service: ServiceRecord) {
   if (!service.requires_return) {
-    return "Nao";
+    return "Não";
   }
 
   return service.return_after_days ? `Sim, apos ${service.return_after_days} dias` : "Sim";
@@ -62,7 +62,7 @@ export function ServiceSidePanel({
 
   return (
     <div className="client-drawer-backdrop" role="presentation" onMouseDown={onClose}>
-      <aside aria-label="Ficha do servico" className="client-side-panel service-side-panel" onMouseDown={(event) => event.stopPropagation()}>
+      <aside aria-label="Ficha do serviço" className="client-side-panel service-side-panel" onMouseDown={(event) => event.stopPropagation()}>
         <header className="client-side-panel__header">
           <div>
             <span className={isInactive ? "status-pill client-status-pill" : "status-pill status-pill--active client-status-pill"}>
@@ -90,8 +90,8 @@ export function ServiceSidePanel({
         {relationshipMessage ? <p className="agenda-alert">{relationshipMessage}</p> : null}
         {hasConfigurationIssue ? (
           <div className="professional-drawer-warning">
-            <strong>Configuracao incompleta</strong>
-            <span>Este servico esta ativo, mas nao possui profissional vinculado. Ele nao podera ser agendado corretamente.</span>
+            <strong>Configuração incompleta</strong>
+            <span>Este serviço está ativo, mas não possui profissional vinculado. Ele não poderá ser agendado corretamente.</span>
             {canManage ? (
               <button className="secondary-button" onClick={() => onManageProfessionals(service)} type="button">
                 Vincular profissionais
@@ -101,7 +101,7 @@ export function ServiceSidePanel({
         ) : null}
 
         <section className="client-drawer-section">
-          <h3>Dados do servico</h3>
+          <h3>Dados do serviço</h3>
           <dl className="client-detail-grid">
             <div>
               <dt>Nome</dt>
@@ -116,7 +116,7 @@ export function ServiceSidePanel({
               <dd>{formatCurrency(service.price)}</dd>
             </div>
             <div>
-              <dt>Duracao media</dt>
+              <dt>Duração média</dt>
               <dd>{formatServiceDuration(service.duration_minutes)}</dd>
             </div>
             <div>
@@ -129,13 +129,13 @@ export function ServiceSidePanel({
             </div>
           </dl>
           <div className="client-notes-box">
-            <span>Descricao</span>
-            <p>{service.description || "Descricao nao informada."}</p>
+            <span>Descrição</span>
+            <p>{service.description || "Descrição não informada."}</p>
           </div>
         </section>
 
         <section className="client-drawer-section">
-          <h3>Desempenho do servico</h3>
+          <h3>Desempenho do serviço</h3>
           <div className="client-summary-grid">
             <div>
               <span>Concluidos no mes</span>
@@ -154,11 +154,11 @@ export function ServiceSidePanel({
               <strong>
                 {summary.lastCompleted
                   ? `${formatServiceDate(summary.lastCompleted.scheduled_date)} · ${getAppointmentClientName(summary.lastCompleted)}`
-                  : "Sem dados no periodo"}
+                  : "Sem dados no período"}
               </strong>
             </div>
             <div>
-              <span>Proximo agendamento</span>
+              <span>Próximo agendamento</span>
               <strong>
                 {summary.nextAppointment
                   ? `${formatServiceDate(summary.nextAppointment.scheduled_date)} as ${formatTime(
@@ -173,7 +173,7 @@ export function ServiceSidePanel({
         <section className="client-drawer-section">
           <h3>Profissionais vinculados</h3>
           {service.professionals.length === 0 ? (
-            <div className="client-panel-empty">Este servico ainda nao possui profissionais vinculados.</div>
+            <div className="client-panel-empty">Este serviço ainda não possui profissionais vinculados.</div>
           ) : (
             <ul className="professional-service-list">
               {service.professionals.map((professional) => (
@@ -195,9 +195,9 @@ export function ServiceSidePanel({
         </section>
 
         <section className="client-drawer-section">
-          <h3>Historico recente</h3>
+          <h3>Histórico recente</h3>
           {summary.history.length === 0 ? (
-            <div className="client-panel-empty">Nenhum atendimento registrado para este servico.</div>
+            <div className="client-panel-empty">Nenhum atendimento registrado para este serviço.</div>
           ) : (
             <ul className="client-history-list">
               {summary.history.slice(0, 8).map((appointment) => (

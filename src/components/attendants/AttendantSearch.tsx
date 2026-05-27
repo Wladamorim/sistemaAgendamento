@@ -1,3 +1,5 @@
+import { SearchInput } from "../ui/SearchInput";
+
 interface AttendantSearchProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -5,14 +7,11 @@ interface AttendantSearchProps {
 
 export function AttendantSearch({ searchTerm, onSearchTermChange }: AttendantSearchProps) {
   return (
-    <label className="client-search">
-      <span>Busca</span>
-      <input
-        onChange={(event) => onSearchTermChange(event.target.value)}
-        placeholder="Buscar por nome, e-mail, telefone ou perfil"
-        type="search"
-        value={searchTerm}
-      />
-    </label>
+    <SearchInput
+      className="client-search"
+      onChange={onSearchTermChange}
+      placeholder="Buscar atendente por nome ou e-mail"
+      value={searchTerm}
+    />
   );
 }

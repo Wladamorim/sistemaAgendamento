@@ -22,7 +22,7 @@ interface ClientSidePanelProps {
 
 function formatDateValue(value: string | null) {
   if (!value) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   const [year, month, day] = value.split("-").map(Number);
@@ -36,7 +36,7 @@ function formatDateValue(value: string | null) {
 
 function formatDateTimeValue(value: string | null) {
   if (!value) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {
@@ -64,8 +64,8 @@ function AppointmentHistoryItem({ appointment }: { appointment: ClientAppointmen
   return (
     <li className="client-history-item">
       <div>
-        <strong>{appointment.procedure_name ?? "Servico nao informado"}</strong>
-        <span>{appointment.professional_name ?? "Profissional nao informado"}</span>
+        <strong>{appointment.procedure_name ?? "Serviço não informado"}</strong>
+        <span>{appointment.professional_name ?? "Profissional não informado"}</span>
       </div>
       <div>
         <span>
@@ -180,7 +180,7 @@ export function ClientSidePanel({
             </div>
             <div>
               <dt>Telefone</dt>
-              <dd>{client.phone || "Nao informado"}</dd>
+              <dd>{client.phone || "Não informado"}</dd>
             </div>
             <div>
               <dt>Data de nascimento</dt>
@@ -192,8 +192,8 @@ export function ClientSidePanel({
             </div>
           </dl>
           <div className="client-notes-box">
-            <span>Observacoes adicionais</span>
-            <p>{client.notes || "Sem observacoes cadastradas."}</p>
+            <span>Observações adicionais</span>
+            <p>{client.notes || "Sem observações cadastradas."}</p>
           </div>
         </section>
 
@@ -213,17 +213,17 @@ export function ClientSidePanel({
               <strong>{formatCurrency(getAverageTicket(summary))}</strong>
             </div>
             <div>
-              <span>Ultimo atendimento</span>
+              <span>Último atendimento</span>
               <strong>
                 {summary.lastCompleted
                   ? `${formatDateValue(summary.lastCompleted.scheduled_date)} · ${
-                      summary.lastCompleted.procedure_name ?? "Servico nao informado"
+                      summary.lastCompleted.procedure_name ?? "Serviço não informado"
                     }`
                   : "Sem atendimentos"}
               </strong>
             </div>
             <div>
-              <span>Proximo agendamento</span>
+              <span>Próximo agendamento</span>
               <strong>
                 {summary.nextAppointment
                   ? `${formatDateValue(summary.nextAppointment.scheduled_date)} as ${formatTime(
@@ -270,7 +270,7 @@ export function ClientSidePanel({
                 <li className="client-history-item" key={usage.id}>
                   <div>
                     <strong>{usage.combo_name ?? "Combo"}</strong>
-                    <span>{usage.procedure_name ?? "Servico nao informado"}</span>
+                    <span>{usage.procedure_name ?? "Serviço não informado"}</span>
                   </div>
                   <div>
                     <span>
@@ -280,9 +280,9 @@ export function ClientSidePanel({
                             month: "2-digit",
                             year: "numeric",
                           }).format(new Date(usage.used_at))
-                        : "Data nao informada"}
+                        : "Data não informada"}
                     </span>
-                    <span>{formatCurrency(usage.production_value)} de producao</span>
+                    <span>{formatCurrency(usage.production_value)} de produção</span>
                   </div>
                 </li>
               ))}
@@ -291,7 +291,7 @@ export function ClientSidePanel({
         </section>
 
         <section className="client-drawer-section">
-          <h3>Historico de agendamentos</h3>
+          <h3>Histórico de agendamentos</h3>
           {summary.history.length === 0 ? (
             <div className="client-panel-empty">Nenhum atendimento registrado para este cliente.</div>
           ) : (

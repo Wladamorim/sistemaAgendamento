@@ -15,11 +15,11 @@ const adminPermissions = [
   "Gerenciar agenda",
   "Gerenciar clientes",
   "Gerenciar profissionais",
-  "Gerenciar servicos",
-  "Ver movimentacao financeira",
+  "Gerenciar serviços",
+  "Ver movimentação financeira",
   "Gerenciar atendentes",
   "Bloquear horarios e profissionais",
-  "Alterar permissoes",
+  "Alterar permissões",
 ];
 
 const attendantPermissions = [
@@ -28,7 +28,7 @@ const attendantPermissions = [
   "Cadastrar clientes",
   "Editar dados permitidos de clientes",
   "Visualizar profissionais",
-  "Visualizar servicos",
+  "Visualizar serviços",
 ];
 
 function getPermissions(roleName: string | null | undefined) {
@@ -65,7 +65,7 @@ export function AttendantSidePanel({
           <div>
             <span className={getRoleBadgeClass(role?.name)}>{roleName}</span>
             <h2>{attendant.name || "Usuario sem nome"}</h2>
-            <p>{attendant.email || "E-mail nao informado"}</p>
+            <p>{attendant.email || "E-mail não informado"}</p>
             <div className="attendant-header-badges">
               <span className={isActive ? "status-pill status-pill--active" : "status-pill"}>
                 {formatAttendantStatus(attendant.is_active)}
@@ -82,7 +82,7 @@ export function AttendantSidePanel({
             Editar
           </button>
           <button className="secondary-button" onClick={() => onChangePermission(attendant)} type="button">
-            Alterar permissao
+            Alterar permissão
           </button>
           <button className="secondary-button" onClick={() => onResetPassword(attendant)} type="button">
             Redefinir senha
@@ -98,15 +98,15 @@ export function AttendantSidePanel({
         </div>
 
         <section className="client-drawer-section">
-          <h3>Dados do usuario</h3>
+          <h3>Dados do usuário</h3>
           <dl className="client-detail-grid">
             <div>
               <dt>Nome</dt>
-              <dd>{attendant.name || "Nao informado"}</dd>
+              <dd>{attendant.name || "Não informado"}</dd>
             </div>
             <div>
               <dt>E-mail</dt>
-              <dd>{attendant.email || "Nao informado"}</dd>
+              <dd>{attendant.email || "Não informado"}</dd>
             </div>
             <div>
               <dt>Telefone</dt>
@@ -153,14 +153,14 @@ export function AttendantSidePanel({
             </div>
           </div>
           <div className="client-notes-box">
-            <span>Acoes criticas</span>
-            <p>Alterar permissao, desativar acesso e reativar acesso exigem a senha do administrador logado.</p>
+            <span>Ações críticas</span>
+            <p>Alterar permissão, desativar acesso e reativar acesso exigem a senha do administrador logado.</p>
           </div>
         </section>
 
         <section className="client-drawer-section">
-          <h3>Acoes recentes</h3>
-          <div className="client-panel-empty">Nenhuma acao registrada para este usuario.</div>
+          <h3>Ações recentes</h3>
+          <div className="client-panel-empty">Nenhuma ação registrada para este usuário.</div>
         </section>
       </aside>
     </div>

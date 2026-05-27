@@ -324,7 +324,7 @@ export function Servicos({ user }: ServicosProps) {
 
       if (servicesResult.error) {
         console.error(servicesResult.error);
-        setErrorMessage("Erro ao carregar servicos.");
+        setErrorMessage("Erro ao carregar serviços.");
         setServices([]);
         setIsLoading(false);
         return;
@@ -362,7 +362,7 @@ export function Servicos({ user }: ServicosProps) {
       if (linkResult.missingRelationshipTable) {
         setRelationshipMessage(RELATIONSHIP_TABLE_MESSAGE);
       } else if (linkResult.error) {
-        setErrorMessage("Erro ao carregar vinculos dos servicos.");
+        setErrorMessage("Erro ao carregar vínculos dos serviços.");
       } else {
         setRelationshipMessage(null);
       }
@@ -396,7 +396,7 @@ export function Servicos({ user }: ServicosProps) {
       if (appointmentError) {
         console.error("SERVICE APPOINTMENTS ERROR:", appointmentError);
         setAppointments([]);
-        setErrorMessage("Servicos carregados, mas nao foi possivel carregar metricas.");
+        setErrorMessage("Serviços carregados, mas não foi possível carregar métricas.");
       } else {
         setAppointments((appointmentData ?? []) as unknown as ServiceAppointmentRecord[]);
       }
@@ -455,7 +455,7 @@ export function Servicos({ user }: ServicosProps) {
 
   function validateService(values: ServiceFormValues) {
     if (!values.name.trim()) {
-      setErrorMessage("Nome do servico e obrigatorio.");
+      setErrorMessage("Nome do serviço é obrigatório.");
       return false;
     }
 
@@ -470,12 +470,12 @@ export function Servicos({ user }: ServicosProps) {
     }
 
     if (toNumber(values.price) === null) {
-      setErrorMessage("Informe o valor do servico.");
+      setErrorMessage("Informe o valor do serviço.");
       return false;
     }
 
     if (toNumber(values.duration_minutes) === null) {
-      setErrorMessage("Informe a duracao media do servico.");
+      setErrorMessage("Informe a duração média do serviço.");
       return false;
     }
 
@@ -499,7 +499,7 @@ export function Servicos({ user }: ServicosProps) {
 
     if (error) {
       console.error(error);
-      setErrorMessage("Erro ao cadastrar servico.");
+      setErrorMessage("Erro ao cadastrar serviço.");
       return null;
     }
 
@@ -533,7 +533,7 @@ export function Servicos({ user }: ServicosProps) {
           setRelationshipMessage(RELATIONSHIP_TABLE_MESSAGE);
         }
 
-        setErrorMessage("Erro ao vincular profissionais ao servico.");
+        setErrorMessage("Erro ao vincular profissionais ao serviço.");
         return false;
       }
     }
@@ -553,7 +553,7 @@ export function Servicos({ user }: ServicosProps) {
           setRelationshipMessage(RELATIONSHIP_TABLE_MESSAGE);
         }
 
-        setErrorMessage("Erro ao vincular profissionais ao servico.");
+        setErrorMessage("Erro ao vincular profissionais ao serviço.");
         return false;
       }
     }
@@ -597,7 +597,7 @@ export function Servicos({ user }: ServicosProps) {
 
     if (error) {
       console.error(error);
-      setErrorMessage("Erro ao cadastrar servico.");
+      setErrorMessage("Erro ao cadastrar serviço.");
       setIsSaving(false);
       return;
     }
@@ -611,7 +611,7 @@ export function Servicos({ user }: ServicosProps) {
 
     closeFormModal();
     setReloadKey((current) => current + 1);
-    showToast("Servico cadastrado com sucesso.");
+    showToast("Serviço cadastrado com sucesso.");
   }
 
   async function handleUpdateService(values: ServiceFormValues) {
@@ -649,7 +649,7 @@ export function Servicos({ user }: ServicosProps) {
 
     if (error) {
       console.error(error);
-      setErrorMessage("Erro ao atualizar servico.");
+      setErrorMessage("Erro ao atualizar serviço.");
       setIsSaving(false);
       return;
     }
@@ -663,7 +663,7 @@ export function Servicos({ user }: ServicosProps) {
 
     closeFormModal();
     setReloadKey((current) => current + 1);
-    showToast("Servico atualizado com sucesso.");
+    showToast("Serviço atualizado com sucesso.");
   }
 
   async function handleSaveServiceProfessionals(professionalIds: string[]) {
@@ -706,7 +706,7 @@ export function Servicos({ user }: ServicosProps) {
 
     if (error) {
       console.error(error);
-      setErrorMessage("Erro ao desativar servico.");
+      setErrorMessage("Erro ao desativar serviço.");
       setServiceToDelete(null);
       return;
     }
@@ -717,15 +717,15 @@ export function Servicos({ user }: ServicosProps) {
 
     setServiceToDelete(null);
     setReloadKey((current) => current + 1);
-    showToast("Servico desativado com sucesso.");
+    showToast("Serviço desativado com sucesso.");
   }
 
   return (
     <main className="clients-page services-page">
       <header className="clients-header">
         <div>
-          <h1>Servicos</h1>
-          <p>Gerencie procedimentos, precos, duracao e profissionais vinculados</p>
+          <h1>Serviços</h1>
+          <p>Gerencie procedimentos, preços, duração e profissionais vinculados</p>
         </div>
       </header>
 
@@ -738,11 +738,11 @@ export function Servicos({ user }: ServicosProps) {
           <ServiceSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
           {userIsAdmin ? (
             <button className="add-button" onClick={() => setModalMode("create")} type="button">
-              + Adicionar servico
+              + Adicionar serviço
             </button>
           ) : null}
         </div>
-        <div className="clients-filter-chips" aria-label="Filtros de servicos">
+        <div className="clients-filter-chips" aria-label="Filtros de serviços">
           {serviceFilterOptions.map((option) => (
             <button
               className={activeFilter === option.value ? "filter-chip filter-chip--active" : "filter-chip"}
@@ -761,8 +761,8 @@ export function Servicos({ user }: ServicosProps) {
       ) : services.length === 0 ? (
         <section className="clients-table-panel">
           <div className="clients-empty-state">
-            <strong>Nenhum servico cadastrado</strong>
-            <span>Cadastre servicos para comecar a montar sua agenda.</span>
+            <strong>Nenhum serviço cadastrado</strong>
+            <span>Cadastre serviços para começar a montar sua agenda.</span>
           </div>
         </section>
       ) : (
@@ -816,10 +816,10 @@ export function Servicos({ user }: ServicosProps) {
       {serviceToDelete ? (
         <ConfirmDialog
           confirmLabel="Desativar"
-          message="Deseja desativar este servico? Ele nao sera removido permanentemente, apenas ficara inativo."
+          message="Deseja desativar este serviço? Ele não será removido permanentemente, apenas ficará inativo."
           onCancel={() => setServiceToDelete(null)}
           onConfirm={handleDeleteService}
-          title="Desativar servico"
+          title="Desativar serviço"
         />
       ) : null}
     </main>

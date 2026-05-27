@@ -14,13 +14,13 @@ export function formatAttendantStatus(isActive: boolean | null) {
 
 export function formatAttendantDateTime(value: string | null | undefined) {
   if (!value) {
-    return "Sem registro";
+    return "Nunca acessou";
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Sem registro";
+    return "Nunca acessou";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {

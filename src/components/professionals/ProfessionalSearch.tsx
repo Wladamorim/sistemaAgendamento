@@ -1,3 +1,5 @@
+import { SearchInput } from "../ui/SearchInput";
+
 interface ProfessionalSearchProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -5,14 +7,11 @@ interface ProfessionalSearchProps {
 
 export function ProfessionalSearch({ searchTerm, onSearchTermChange }: ProfessionalSearchProps) {
   return (
-    <label className="client-search">
-      <span>Busca</span>
-      <input
-        onChange={(event) => onSearchTermChange(event.target.value)}
-        placeholder="Buscar profissional por nome, area, telefone ou e-mail"
-        type="search"
-        value={searchTerm}
-      />
-    </label>
+    <SearchInput
+      className="client-search"
+      onChange={onSearchTermChange}
+      placeholder="Buscar profissional por nome, área, telefone ou e-mail"
+      value={searchTerm}
+    />
   );
 }

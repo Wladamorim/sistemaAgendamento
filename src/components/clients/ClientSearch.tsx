@@ -1,3 +1,5 @@
+import { SearchInput } from "../ui/SearchInput";
+
 interface ClientSearchProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -5,14 +7,11 @@ interface ClientSearchProps {
 
 export function ClientSearch({ searchTerm, onSearchTermChange }: ClientSearchProps) {
   return (
-    <label className="client-search">
-      <span>Busca</span>
-      <input
-        onChange={(event) => onSearchTermChange(event.target.value)}
-        placeholder="Buscar cliente por nome ou telefone"
-        type="search"
-        value={searchTerm}
-      />
-    </label>
+    <SearchInput
+      className="client-search"
+      onChange={onSearchTermChange}
+      placeholder="Buscar cliente por nome ou telefone"
+      value={searchTerm}
+    />
   );
 }

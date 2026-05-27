@@ -15,7 +15,7 @@ interface ClientTableProps {
 
 function formatDateValue(value: string | null) {
   if (!value) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   const [year, month, day] = value.split("-").map(Number);
@@ -47,14 +47,14 @@ function getAppointmentSummary(summary: ClientOperationalSummary, type: "last" |
 
   if (type === "last") {
     return {
-      detail: appointment.procedure_name ?? "Servico nao informado",
+      detail: appointment.procedure_name ?? "Serviço não informado",
       title: formatAppointmentDate(appointment.scheduled_date),
     };
   }
 
   return {
-    detail: appointment.procedure_name ?? "Servico nao informado",
-    title: `${formatAppointmentDate(appointment.scheduled_date)} as ${formatTime(appointment.start_time)}`,
+    detail: appointment.procedure_name ?? "Serviço não informado",
+    title: `${formatAppointmentDate(appointment.scheduled_date)} às ${formatTime(appointment.start_time)}`,
   };
 }
 
@@ -64,14 +64,14 @@ function getRelationshipLabel(summary: ClientOperationalSummary) {
   }
 
   if (summary.totalCompleted === 1) {
-    return "Uma visita concluida";
+    return "Uma visita concluída";
   }
 
   if (summary.nextAppointment) {
     return "Novo agendamento";
   }
 
-  return "Sem historico";
+  return "Sem histórico";
 }
 
 export function ClientTable({
@@ -97,8 +97,8 @@ export function ClientTable({
           <div className="clients-list__header" aria-hidden="true">
             <span>Cliente</span>
             <span>Agenda</span>
-            <span>Situacao</span>
-            <span>Acoes</span>
+            <span>Situação</span>
+            <span>Ações</span>
           </div>
 
           {clients.map((client) => {
@@ -117,17 +117,17 @@ export function ClientTable({
                 <button className="client-name-button client-list-row__client" onClick={() => onView(client)} type="button">
                   <strong>{client.full_name}</strong>
                   <span>{client.phone || "Sem telefone"}</span>
-                  {client.notes ? <em>Com observacao</em> : null}
+                  {client.notes ? <em>Com observação</em> : null}
                 </button>
 
                 <div className="client-list-row__agenda">
                   <div>
-                    <span className="client-list-label">Proximo</span>
+                    <span className="client-list-label">Próximo</span>
                     <strong>{nextAppointment.title}</strong>
                     {nextAppointment.detail ? <span>{nextAppointment.detail}</span> : null}
                   </div>
                   <div>
-                    <span className="client-list-label">Ultima visita</span>
+                    <span className="client-list-label">Última visita</span>
                     <strong>{lastVisit.title}</strong>
                     {lastVisit.detail ? <span>{lastVisit.detail}</span> : null}
                   </div>
@@ -151,7 +151,7 @@ export function ClientTable({
                     Ver ficha
                   </button>
                   <details className="client-actions-menu">
-                    <summary>Acoes</summary>
+                    <summary>Ações</summary>
                     <div className="client-actions-menu__content">
                       <button onClick={() => onEdit(client)} type="button">
                         Editar

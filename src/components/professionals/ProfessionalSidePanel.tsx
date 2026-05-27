@@ -23,8 +23,8 @@ function AppointmentItem({ appointment }: { appointment: ProfessionalAppointment
   return (
     <li className="client-history-item">
       <div>
-        <strong>{appointment.client_name ?? "Cliente nao informado"}</strong>
-        <span>{appointment.procedure_name ?? "Servico nao informado"}</span>
+        <strong>{appointment.client_name ?? "Cliente não informado"}</strong>
+        <span>{appointment.procedure_name ?? "Serviço não informado"}</span>
       </div>
       <div>
         <span>
@@ -49,7 +49,7 @@ function ServiceItem({ service }: { service: ProfessionalServiceRecord }) {
         <span>{category?.name ?? "Sem categoria"}</span>
       </div>
       <div>
-        <span>{service.duration_minutes ? `${service.duration_minutes} min` : "Duracao nao informada"}</span>
+        <span>{service.duration_minutes ? `${service.duration_minutes} min` : "Duração não informada"}</span>
         <span>{formatCurrency(service.price)}</span>
         <span className={service.is_active ? "status-pill status-pill--active" : "status-pill"}>
           {service.is_active ? "Ativo" : "Inativo"}
@@ -85,7 +85,7 @@ export function ProfessionalSidePanel({
               {isInactive ? "Inativo" : "Ativo"}
             </span>
             <h2>{professional.name}</h2>
-            <p>{professional.work_type || "Especialidade nao informada"}</p>
+            <p>{professional.work_type || "Especialidade não informada"}</p>
           </div>
           <button aria-label="Fechar ficha" className="icon-button" onClick={onClose} type="button">
             ×
@@ -105,7 +105,7 @@ export function ProfessionalSidePanel({
                 Editar
               </button>
               <button className="secondary-button" onClick={() => onManageServices(professional)} type="button">
-                Gerenciar servicos
+                Gerenciar serviços
               </button>
             </>
           ) : null}
@@ -113,8 +113,8 @@ export function ProfessionalSidePanel({
 
         {linkedServices.length === 0 ? (
           <div className="professional-drawer-warning">
-            <strong>Sem servicos vinculados</strong>
-            <span>Este profissional nao aparecera corretamente no fluxo de agendamento.</span>
+            <strong>Sem serviços vinculados</strong>
+            <span>Este profissional não aparecerá corretamente no fluxo de agendamento.</span>
           </div>
         ) : null}
 
@@ -127,15 +127,15 @@ export function ProfessionalSidePanel({
             </div>
             <div>
               <dt>Telefone</dt>
-              <dd>{professional.phone || "Nao informado"}</dd>
+              <dd>{professional.phone || "Não informado"}</dd>
             </div>
             <div>
               <dt>E-mail</dt>
-              <dd>{professional.email || "Nao informado"}</dd>
+              <dd>{professional.email || "Não informado"}</dd>
             </div>
             <div>
               <dt>Tipo de trabalho</dt>
-              <dd>{professional.work_type || "Nao informado"}</dd>
+              <dd>{professional.work_type || "Não informado"}</dd>
             </div>
             <div>
               <dt>Status operacional</dt>
@@ -148,7 +148,7 @@ export function ProfessionalSidePanel({
           </dl>
           <div className="client-notes-box">
             <span>O que faz</span>
-            <p>{professional.work_description || "Descricao nao informada."}</p>
+            <p>{professional.work_description || "Descrição não informada."}</p>
           </div>
         </section>
 
@@ -160,7 +160,7 @@ export function ProfessionalSidePanel({
               <strong>{summary.appointmentsToday}</strong>
             </div>
             <div>
-              <span>Proximos agendamentos</span>
+              <span>Próximos agendamentos</span>
               <strong>{summary.nextAppointments.length}</strong>
             </div>
             <div>
@@ -179,9 +179,9 @@ export function ProfessionalSidePanel({
         </section>
 
         <section className="client-drawer-section">
-          <h3>Servicos vinculados</h3>
+          <h3>Serviços vinculados</h3>
           {linkedServices.length === 0 ? (
-            <div className="client-panel-empty">Este profissional ainda nao possui servicos vinculados.</div>
+            <div className="client-panel-empty">Este profissional ainda não possui serviços vinculados.</div>
           ) : (
             <ul className="professional-service-list">
               {linkedServices.map((service) => (
@@ -211,7 +211,7 @@ export function ProfessionalSidePanel({
         </section>
 
         <section className="client-drawer-section">
-          <h3>Historico recente</h3>
+          <h3>Histórico recente</h3>
           {summary.history.length === 0 ? (
             <div className="client-panel-empty">Nenhum atendimento registrado para este profissional.</div>
           ) : (

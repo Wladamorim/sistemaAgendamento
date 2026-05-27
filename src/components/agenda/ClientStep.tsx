@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { maskPhone } from "../../lib/phone";
 import { supabase } from "../../lib/supabase";
 import type { Client } from "../../types/agenda";
+import { SearchInput } from "../ui/SearchInput";
 
 export type ClientMode = "existing" | "new" | null;
 
@@ -134,15 +135,13 @@ export function ClientStep({
       {mode === "existing" ? (
         <div className="client-step-panel">
           <h4>Buscar cliente</h4>
-          <label className="field-label">
-            Nome ou telefone
-            <input
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Digite nome ou telefone"
-              type="search"
-              value={searchTerm}
-            />
-          </label>
+          <SearchInput
+            ariaLabel="Nome ou telefone"
+            className="field-label"
+            onChange={setSearchTerm}
+            placeholder="Digite nome ou telefone"
+            value={searchTerm}
+          />
 
           {selectedClient ? (
             <div className="selected-client">

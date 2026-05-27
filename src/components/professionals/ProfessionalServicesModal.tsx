@@ -37,7 +37,7 @@ export function ProfessionalServicesModal({
       <section className="appointment-modal appointment-modal--wide" onMouseDown={(event) => event.stopPropagation()}>
         <div className="appointment-modal__header">
           <div>
-            <h2>Gerenciar servicos</h2>
+            <h2>Gerenciar serviços</h2>
             <p>{professional.name}</p>
           </div>
           <button aria-label="Fechar" className="icon-button" onClick={onClose} type="button">
@@ -47,7 +47,7 @@ export function ProfessionalServicesModal({
 
         <div className="appointment-modal__body">
           {allServices.length === 0 ? (
-            <div className="client-panel-empty">Nenhum servico ativo cadastrado.</div>
+            <div className="client-panel-empty">Nenhum serviço ativo cadastrado.</div>
           ) : (
             <div className="professional-service-manager">
               {allServices.map((service) => {
@@ -64,7 +64,7 @@ export function ProfessionalServicesModal({
                       <strong>{service.name}</strong>
                       <small>
                         {category?.name ?? "Sem categoria"} ·{" "}
-                        {service.duration_minutes ? `${service.duration_minutes} min` : "Duracao nao informada"} ·{" "}
+                        {service.duration_minutes ? `${service.duration_minutes} min` : "Duração não informada"} ·{" "}
                         {formatCurrency(service.price)}
                       </small>
                     </span>

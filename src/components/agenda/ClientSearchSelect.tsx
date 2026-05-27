@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { maskPhone } from "../../lib/phone";
 import { supabase } from "../../lib/supabase";
 import type { Client } from "../../types/agenda";
+import { SearchInput } from "../ui/SearchInput";
 
 interface ClientSearchSelectProps {
   selectedClient: Client | null;
@@ -132,15 +133,13 @@ export function ClientSearchSelect({ selectedClient, onSelect }: ClientSearchSel
     <section className="modal-section">
       <h3>Cliente</h3>
 
-      <label className="field-label">
-        Buscar por nome ou telefone
-        <input
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Digite pelo menos 2 caracteres"
-          type="search"
-          value={searchTerm}
-        />
-      </label>
+      <SearchInput
+        ariaLabel="Buscar por nome ou telefone"
+        className="field-label"
+        onChange={setSearchTerm}
+        placeholder="Digite pelo menos 2 caracteres"
+        value={searchTerm}
+      />
 
       {selectedClient ? (
         <div className="selected-client">

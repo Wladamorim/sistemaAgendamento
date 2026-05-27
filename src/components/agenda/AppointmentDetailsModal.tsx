@@ -320,7 +320,7 @@ export function AppointmentDetailsModal({
       if (error) {
         console.error("LOAD COMPATIBLE COMBOS ERROR:", error);
         setCompatibleCombos([]);
-        setErrorMessage("Nao foi possivel carregar combos do cliente. Verifique se a migration de Combos foi aplicada.");
+        setErrorMessage("Não foi possível carregar combos do cliente. Verifique se a migration de Combos foi aplicada.");
         setIsLoadingCombos(false);
         return;
       }
@@ -559,7 +559,7 @@ export function AppointmentDetailsModal({
 
     if (paymentMethod === "combo") {
       if (!selectedClientComboId) {
-        setErrorMessage("Selecione o combo que sera usado neste atendimento.");
+        setErrorMessage("Selecione o combo que será usado neste atendimento.");
         return;
       }
 
@@ -583,7 +583,7 @@ export function AppointmentDetailsModal({
         console.error("FINISH APPOINTMENT WITH COMBO ERROR:", comboError);
         setErrorMessage(
           comboError.message.includes("finalize_appointment_with_combo")
-            ? "A funcao de finalizar com combo ainda nao existe no Supabase. Aplique a migration de Combos."
+            ? "A função de finalizar com combo ainda não existe no Supabase. Aplique a migration de Combos."
             : comboError.message,
         );
         setIsFinishing(false);
@@ -1076,7 +1076,7 @@ export function AppointmentDetailsModal({
                 {isLoadingCombos ? (
                   <span>Carregando combos compativeis...</span>
                 ) : compatibleCombos.length === 0 ? (
-                  <span>Este cliente nao possui combo valido para este servico ou categoria.</span>
+                  <span>Este cliente não possui combo válido para este serviço ou categoria.</span>
                 ) : (
                   <div className="combo-payment-options">
                     {compatibleCombos.map((combo) => (

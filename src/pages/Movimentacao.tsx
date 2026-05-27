@@ -4,6 +4,7 @@ import { RestrictedAccess } from "../components/RestrictedAccess";
 import { MetricCard } from "../components/dashboard/MetricCard";
 import { MovementTable } from "../components/dashboard/MovementTable";
 import { RankingList } from "../components/dashboard/RankingList";
+import { SearchInput } from "../components/ui/SearchInput";
 import {
   addDays,
   formatCurrency,
@@ -168,7 +169,7 @@ const paymentFilterOptions: { label: string; value: MovementPaymentFilter }[] = 
   { label: "Cortesia", value: "cortesia" },
   { label: "Multiplas", value: "multiplas" },
   { label: "Combo", value: "combo" },
-  { label: "Nao informado", value: "nao_informado" },
+  { label: "Não informado", value: "nao_informado" },
 ];
 
 function startOfWeek(date: Date) {
@@ -305,7 +306,7 @@ function formatComparison(current: number, previous: number, label: string, form
   const signedValue = `${diff > 0 ? "+" : ""}${formatter(diff)}`;
 
   if (previous === 0) {
-    return current > 0 ? `${signedValue} vs ${label}` : `Sem variacao vs ${label}`;
+    return current > 0 ? `${signedValue} vs ${label}` : `Sem variação vs ${label}`;
   }
 
   return `${signedValue} (${formatPercent((diff / previous) * 100)}) vs ${label}`;
@@ -623,7 +624,7 @@ async function loadMovementAppointments(range: PeriodRange) {
 
   if (isMissingPaymentColumnError(viewWithPayment.error)) {
     console.warn(
-      "A view v_appointments_full nao possui colunas de pagamento. A Movimentacao vai carregar dados antigos sem fechamento detalhado.",
+      "A view v_appointments_full não possui colunas de pagamento. A Movimentação vai carregar dados antigos sem fechamento detalhado.",
     );
 
     const viewWithoutPayment = await queryAppointmentsView(range, false);
@@ -650,7 +651,7 @@ async function loadMovementComboSales(range: PeriodRange) {
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.warn("Nao foi possivel carregar vendas de combos na movimentacao:", error);
+    console.warn("Não foi possível carregar vendas de combos na movimentação:", error);
     return [];
   }
 
@@ -658,7 +659,7 @@ async function loadMovementComboSales(range: PeriodRange) {
 }
 
 function downloadCsv(appointments: MovementAppointment[]) {
-  const headers = ["data", "horario", "cliente", "servico", "profissional", "categoria", "valor", "pagamento", "status"];
+  const headers = ["data", "horário", "cliente", "serviço", "profissional", "categoria", "valor", "pagamento", "status"];
   const rows = appointments.map((appointment) => [
     appointment.scheduled_date,
     `${appointment.start_time}-${appointment.end_time}`,
@@ -695,7 +696,7 @@ function PaymentBreakdown({ items, total }: { items: PaymentBreakdownItem[]; tot
       {items.length === 0 ? (
         <div className="movement-empty-state">
           <strong>Sem pagamentos registrados</strong>
-          <span>Sem pagamentos registrados neste periodo.</span>
+          <span>Sem pagamentos registrados neste período.</span>
         </div>
       ) : (
         <div className="payment-breakdown-list">
@@ -721,11 +722,11 @@ function RevenueChart({ items }: { items: ChartItem[] }) {
 
   return (
     <section className="dashboard-panel revenue-chart-panel">
-      <h2>Producao por periodo</h2>
+      <h2>Produção por período</h2>
       {maxValue === 0 ? (
         <div className="movement-empty-state">
           <strong>Sem dados para exibir grafico</strong>
-          <span>Nao ha atendimentos finalizados neste periodo.</span>
+          <span>Não há atendimentos finalizados neste período.</span>
         </div>
       ) : (
         <div className="revenue-chart">
@@ -903,8 +904,8 @@ export function Movimentacao({ user }: MovimentacaoProps) {
     <main className="movement-page">
       <header className="movement-header">
         <div>
-          <h1>Movimentacao</h1>
-          <p>Resumo financeiro e operacional por periodo</p>
+          <h1>Movimentação</h1>
+          <p>Resumo financeiro e operacional por período</p>
         </div>
 
         <div className="movement-date-controls">
@@ -935,7 +936,7 @@ export function Movimentacao({ user }: MovimentacaoProps) {
             {selectedPeriod === "day" ? "Ontem" : "Anterior"}
           </button>
           <button onClick={() => setSelectedDate((current) => shiftDateByPeriod(current, selectedPeriod, 1))} type="button">
-            {selectedPeriod === "day" ? "Amanha" : "Proximo"}
+            {selectedPeriod === "day" ? "Amanhã" : "Próximo"}
           </button>
         </div>
       </header>
@@ -987,7 +988,7 @@ export function Movimentacao({ user }: MovimentacaoProps) {
             <MetricCard
               detail={`${comboUsageCount} atendimento(s) por combo`}
               icon="revenue"
-              label="Producao do periodo"
+              label="Produção do período"
               value={formatCurrency(totalProduction)}
             />
             <MetricCard
@@ -1021,15 +1022,12 @@ export function Movimentacao({ user }: MovimentacaoProps) {
           </section>
 
           <section className="movement-filters-panel">
-            <label className="client-search movement-search">
-              <span>Busca</span>
-              <input
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar cliente, servico ou profissional"
-                type="search"
-                value={searchTerm}
-              />
-            </label>
+            <SearchInput
+              className="client-search movement-search"
+              onChange={setSearchTerm}
+              placeholder="Buscar cliente, serviço ou profissional"
+              value={searchTerm}
+            />
             <label className="movement-date-input">
               Status
               <select onChange={(event) => setStatusFilter(event.target.value as MovementStatusFilter)} value={statusFilter}>
@@ -1077,7 +1075,7 @@ export function Movimentacao({ user }: MovimentacaoProps) {
             </button>
           </section>
 
-          <MovementTable appointments={filteredAppointments} title="Atendimentos do periodo" />
+          <MovementTable appointments={filteredAppointments} title="Atendimentos do período" />
         </>
       )}
     </main>

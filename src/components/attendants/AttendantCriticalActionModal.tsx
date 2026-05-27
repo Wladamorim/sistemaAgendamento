@@ -36,7 +36,7 @@ export function AttendantCriticalActionModal({
 
   function getTitle() {
     if (isPermissionAction) {
-      return "Alterar permissao";
+      return "Alterar permissão";
     }
 
     if (isStatusAction) {
@@ -48,13 +48,13 @@ export function AttendantCriticalActionModal({
 
   function getDescription() {
     if (isPermissionAction) {
-      return "Escolha o novo perfil e confirme sua identidade para salvar a alteracao.";
+      return "Escolha o novo perfil e confirme sua identidade para salvar a alteração.";
     }
 
     if (isStatusAction) {
       return action.nextActive
-        ? "Confirme sua senha para reativar o acesso deste usuario."
-        : "Confirme sua senha para desativar o acesso deste usuario.";
+        ? "Confirme sua senha para reativar o acesso deste usuário."
+        : "Confirme sua senha para desativar o acesso deste usuário.";
     }
 
     return "A redefinicao segura de senha precisa de uma Edge Function administrativa. O botao fica preparado, sem expor chaves administrativas no frontend.";
@@ -67,10 +67,10 @@ export function AttendantCriticalActionModal({
           <h2>{getTitle()}</h2>
           <p>{getDescription()}</p>
           <div className="client-notes-box">
-            <span>Funcionalidade em preparacao</span>
+            <span>Funcionalidade em preparação</span>
             <p>
               Para redefinir senha com seguranca, crie uma Edge Function com a chave administrativa nos secrets do Supabase.
-              O frontend nao deve atualizar auth.users diretamente.
+              O frontend não deve atualizar auth.users diretamente.
             </p>
           </div>
           <div className="confirm-dialog__actions">
@@ -91,7 +91,7 @@ export function AttendantCriticalActionModal({
 
         <div className="attendant-action-summary">
           <strong>{action.attendant.name || action.attendant.email || "Usuario sem nome"}</strong>
-          <span>{action.attendant.email || "E-mail nao informado"}</span>
+          <span>{action.attendant.email || "E-mail não informado"}</span>
         </div>
 
         {isPermissionAction ? (
@@ -115,11 +115,11 @@ export function AttendantCriticalActionModal({
           </>
         ) : (
           <div className={action.nextActive ? "client-notes-box" : "attendant-security-warning"}>
-            <span>{action.nextActive ? "Reativacao" : "Acao perigosa"}</span>
+            <span>{action.nextActive ? "Reativação" : "Ação perigosa"}</span>
             <p>
               {action.nextActive
-                ? "O usuario voltara a acessar o sistema se as credenciais estiverem validas."
-                : "O usuario nao conseguira acessar o sistema enquanto estiver inativo."}
+                ? "O usuário voltará a acessar o sistema se as credenciais estiverem válidas."
+                : "O usuário não conseguirá acessar o sistema enquanto estiver inativo."}
             </p>
           </div>
         )}
