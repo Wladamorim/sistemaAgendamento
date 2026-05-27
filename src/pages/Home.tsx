@@ -33,7 +33,7 @@ function getRouteFromHash(): AppRoute {
 
 export function Home({ user, isSigningOut, onSignOut }: HomeProps) {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(() => getRouteFromHash());
-  const adminOnlyRoutes: AppRoute[] = ["combos", "movimentacao", "atendentes"];
+  const adminOnlyRoutes: AppRoute[] = ["movimentacao", "atendentes"];
   const isRestricted = adminOnlyRoutes.includes(activeRoute) && !isAdmin(user);
 
   useEffect(() => {

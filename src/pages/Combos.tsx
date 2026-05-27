@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { isAdmin } from "../components/AppShell";
-import { RestrictedAccess } from "../components/RestrictedAccess";
 import { SearchInput } from "../components/ui/SearchInput";
 import {
   comboLinkedTypeLabels,
@@ -33,6 +32,12 @@ interface CombosProps {
 
 type ComboTab = "templates" | "client-combos";
 type ComboFilter = "all" | "active" | "inactive" | "expired" | "completed" | "cancelled" | "with_balance" | "without_balance";
+type ComboSalePaymentItem = {
+  id: string;
+  amount: string;
+  installments: string;
+  method: string;
+};
 
 const comboFilters: { label: string; value: ComboFilter }[] = [
   { label: "Todos", value: "all" },
@@ -72,6 +77,19 @@ const defaultClientComboEditForm: ClientComboEditFormValues = {
   notes: "",
   total_sessions: "",
 };
+
+const comboSalePaymentOptions = comboPaymentOptions;
+const comboMultiplePaymentItemOptions = comboPaymentOptions.filter((option) => option.value !== "multiplas");
+const installmentOptions = Array.from({ length: 12 }, (_, index) => index + 1);
+
+function createComboSalePaymentItem(): ComboSalePaymentItem {
+  return {
+    amount: "",
+    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    installments: "",
+    method: "",
+  };
+}
 
 function getSingle<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
@@ -168,6 +186,7 @@ export function Combos({ user }: CombosProps) {
   const [comboUsages, setComboUsages] = useState<ComboUsageFull[]>([]);
   const [templateForm, setTemplateForm] = useState<ComboTemplateFormValues>(defaultTemplateForm);
   const [clientComboForm, setClientComboForm] = useState<ClientComboFormValues>(defaultClientComboForm);
+  const [comboSalePaymentItems, setComboSalePaymentItems] = useState<ComboSalePaymentItem[]>([]);
   const [clientComboEditForm, setClientComboEditForm] =
     useState<ClientComboEditFormValues>(defaultClientComboEditForm);
   const [editingTemplate, setEditingTemplate] = useState<ComboTemplate | null>(null);
@@ -181,15 +200,14 @@ export function Combos({ user }: CombosProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const canManage = isAdmin(user);
+  const canManageComboTemplates = isAdmin(user);
+  const canLinkComboToClient = isAdmin(user) || user.role === "Atendente";
+  const canCancelClientCombo = isAdmin(user);
+  const canEditClientCombo = isAdmin(user);
 
   useEffect(() => {
-    if (!canManage) {
-      return;
-    }
-
     loadCombos();
-  }, [canManage]);
+  }, []);
 
   useEffect(() => {
     if (!selectedClientCombo) {
@@ -277,6 +295,11 @@ export function Combos({ user }: CombosProps) {
   }
 
   function openNewTemplateForm() {
+    if (!canManageComboTemplates) {
+      setErrorMessage("Você não tem permissão para criar modelos de combo.");
+      return;
+    }
+
     setEditingTemplate(null);
     setTemplateForm(defaultTemplateForm);
     setShowTemplateForm(true);
@@ -285,6 +308,11 @@ export function Combos({ user }: CombosProps) {
   }
 
   function openEditTemplateForm(template: ComboTemplate) {
+    if (!canManageComboTemplates) {
+      setErrorMessage("Você não tem permissão para editar modelos de combo.");
+      return;
+    }
+
     setEditingTemplate(template);
     setTemplateForm(templateToForm(template));
     setShowTemplateForm(true);
@@ -293,17 +321,41 @@ export function Combos({ user }: CombosProps) {
   }
 
   function openClientComboForm(templateId = "") {
+    if (!canLinkComboToClient) {
+      setErrorMessage("Você não tem permissão para vincular combos a clientes.");
+      return;
+    }
+
     setClientComboForm({
       ...defaultClientComboForm,
       combo_template_id: templateId,
       start_date: formatDateForQuery(new Date()),
     });
+    setComboSalePaymentItems([]);
     setShowClientComboForm(true);
     setErrorMessage(null);
     setSuccessMessage(null);
   }
 
+  function updateComboSalePaymentItem(itemId: string, updates: Partial<ComboSalePaymentItem>) {
+    setComboSalePaymentItems((items) =>
+      items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+    );
+  }
+
+  function removeComboSalePaymentItem(itemId: string) {
+    setComboSalePaymentItems((items) => {
+      const nextItems = items.filter((item) => item.id !== itemId);
+      return nextItems.length > 0 ? nextItems : [createComboSalePaymentItem()];
+    });
+  }
+
   function openEditClientCombo(combo: ClientComboFull) {
+    if (!canEditClientCombo) {
+      setErrorMessage("Você não tem permissão para editar combos de clientes.");
+      return;
+    }
+
     setEditingClientCombo(combo);
     setClientComboEditForm({
       expiration_date: combo.expiration_date,
@@ -316,6 +368,11 @@ export function Combos({ user }: CombosProps) {
 
   async function handleSaveTemplate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!canManageComboTemplates) {
+      setErrorMessage("Você não tem permissão para criar modelos de combo.");
+      return;
+    }
 
     if (!templateForm.name.trim()) {
       setErrorMessage("Informe o nome do combo.");
@@ -378,6 +435,11 @@ export function Combos({ user }: CombosProps) {
   }
 
   async function handleToggleTemplate(template: ComboTemplate) {
+    if (!canManageComboTemplates) {
+      setErrorMessage("Você não tem permissão para alterar modelos de combo.");
+      return;
+    }
+
     setIsSaving(true);
     setErrorMessage(null);
 
@@ -405,20 +467,40 @@ export function Combos({ user }: CombosProps) {
   async function handleSaveClientCombo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!canLinkComboToClient) {
+      setErrorMessage("Você não tem permissão para vincular combos a clientes.");
+      return;
+    }
+
     const selectedTemplate = templates.find((template) => template.id === clientComboForm.combo_template_id);
 
-    if (!clientComboForm.client_id || !selectedTemplate) {
-      setErrorMessage("Selecione cliente e modelo de combo.");
+    if (!clientComboForm.client_id) {
+      setErrorMessage("Selecione um cliente.");
+      return;
+    }
+
+    if (!selectedTemplate) {
+      setErrorMessage("Selecione um combo.");
+      return;
+    }
+
+    if (!selectedTemplate.is_active) {
+      setErrorMessage("Selecione um combo ativo.");
       return;
     }
 
     if (!clientComboForm.purchase_payment_method) {
-      setErrorMessage("Selecione a forma de pagamento da compra do combo.");
+      setErrorMessage("Selecione a forma de pagamento.");
       return;
     }
 
-    if (clientComboForm.purchase_payment_method === "cartao_credito" && !clientComboForm.payment_installments) {
-      setErrorMessage("Informe a quantidade de parcelas.");
+    const installments = Number(clientComboForm.payment_installments);
+
+    if (
+      clientComboForm.purchase_payment_method === "cartao_credito" &&
+      (!installments || installments < 1 || installments > 12)
+    ) {
+      setErrorMessage("Informe as parcelas do cartão de crédito.");
       return;
     }
 
@@ -426,13 +508,55 @@ export function Combos({ user }: CombosProps) {
     setErrorMessage(null);
 
     const packagePrice = parseMoneyValue(selectedTemplate.package_price);
+    const receivedAmount = clientComboForm.purchase_payment_method === "cortesia" ? 0 : packagePrice;
     const paymentDetails: Record<string, unknown> = {
-      amount: packagePrice,
+      amount: receivedAmount,
+      combo_value: packagePrice,
       type: clientComboForm.purchase_payment_method,
     };
+    let normalizedMultipleItems: Array<{ amount: number; installments?: number; method: string }> = [];
+
+    if (clientComboForm.purchase_payment_method === "multiplas") {
+      normalizedMultipleItems = comboSalePaymentItems
+        .map((item) => ({
+          amount: parseMoneyValue(item.amount),
+          installments: item.method === "cartao_credito" ? Number(item.installments) : undefined,
+          method: item.method,
+        }))
+        .filter((item) => item.method && item.amount > 0);
+
+      if (normalizedMultipleItems.length < 2) {
+        setErrorMessage("Informe pelo menos duas formas de pagamento.");
+        setIsSaving(false);
+        return;
+      }
+
+      const hasInvalidCreditInstallments = normalizedMultipleItems.some(
+        (item) =>
+          item.method === "cartao_credito" &&
+          (!item.installments || item.installments < 1 || item.installments > 12),
+      );
+
+      if (hasInvalidCreditInstallments) {
+        setErrorMessage("Informe as parcelas do cartão de crédito.");
+        setIsSaving(false);
+        return;
+      }
+
+      const paymentTotal = normalizedMultipleItems.reduce((sum, item) => sum + item.amount, 0);
+      const difference = Number((packagePrice - paymentTotal).toFixed(2));
+
+      if (Math.abs(difference) > 0.009) {
+        setErrorMessage("A soma dos pagamentos precisa ser igual ao valor do combo.");
+        setIsSaving(false);
+        return;
+      }
+
+      paymentDetails.items = normalizedMultipleItems;
+    }
 
     if (clientComboForm.purchase_payment_method === "cartao_credito") {
-      paymentDetails.installments = Number(clientComboForm.payment_installments);
+      paymentDetails.installments = installments;
     }
 
     const { error } = await supabase.rpc("create_client_combo_from_template", {
@@ -443,7 +567,7 @@ export function Combos({ user }: CombosProps) {
       p_purchase_payment_details: paymentDetails,
       p_purchase_payment_installments:
         clientComboForm.purchase_payment_method === "cartao_credito"
-          ? Number(clientComboForm.payment_installments)
+          ? installments
           : null,
       p_purchase_payment_method: clientComboForm.purchase_payment_method,
       p_start_date: clientComboForm.start_date,
@@ -464,6 +588,11 @@ export function Combos({ user }: CombosProps) {
 
   async function handleUpdateClientCombo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!canEditClientCombo) {
+      setErrorMessage("Você não tem permissão para editar combos de clientes.");
+      return;
+    }
 
     if (!editingClientCombo) {
       return;
@@ -527,6 +656,11 @@ export function Combos({ user }: CombosProps) {
   }
 
   async function handleCancelClientCombo(combo: ClientComboFull) {
+    if (!canCancelClientCombo) {
+      setErrorMessage("Você não tem permissão para cancelar combos.");
+      return;
+    }
+
     const reason = window.prompt("Informe o motivo do cancelamento do combo.");
     if (!reason?.trim()) {
       return;
@@ -574,6 +708,10 @@ export function Combos({ user }: CombosProps) {
     const searchValue = normalizeSearch(searchTerm);
 
     return templates.filter((template) => {
+      if (!canManageComboTemplates && !template.is_active) {
+        return false;
+      }
+
       const matchesFilter = matchesTemplateFilter(template, filter);
       const matchesSearch =
         !searchValue ||
@@ -590,7 +728,7 @@ export function Combos({ user }: CombosProps) {
 
       return matchesFilter && matchesSearch;
     });
-  }, [filter, searchTerm, templates]);
+  }, [canManageComboTemplates, filter, searchTerm, templates]);
 
   const filteredClientCombos = useMemo(() => {
     const searchValue = normalizeSearch(searchTerm);
@@ -616,9 +754,18 @@ export function Combos({ user }: CombosProps) {
     });
   }, [clientCombos, filter, searchTerm]);
 
-  if (!canManage) {
-    return <RestrictedAccess />;
-  }
+  const selectedClientComboTemplate = useMemo(
+    () => templates.find((template) => template.id === clientComboForm.combo_template_id) ?? null,
+    [clientComboForm.combo_template_id, templates],
+  );
+  const comboSalePackagePrice = selectedClientComboTemplate
+    ? parseMoneyValue(selectedClientComboTemplate.package_price)
+    : 0;
+  const comboSaleMultipleTotal = comboSalePaymentItems.reduce(
+    (sum, item) => sum + parseMoneyValue(item.amount),
+    0,
+  );
+  const comboSaleMultipleDifference = Number((comboSalePackagePrice - comboSaleMultipleTotal).toFixed(2));
 
   return (
     <main className="combos-page">
@@ -629,12 +776,16 @@ export function Combos({ user }: CombosProps) {
         </div>
 
         <div className="combos-header__actions">
-          <button className="secondary-button" onClick={() => openClientComboForm()} type="button">
-            Vincular combo ao cliente
-          </button>
-          <button className="add-button" onClick={openNewTemplateForm} type="button">
-            + Novo combo
-          </button>
+          {canLinkComboToClient ? (
+            <button className="secondary-button" onClick={() => openClientComboForm()} type="button">
+              Vincular combo ao cliente
+            </button>
+          ) : null}
+          {canManageComboTemplates ? (
+            <button className="add-button" onClick={openNewTemplateForm} type="button">
+              + Novo combo
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -693,7 +844,11 @@ export function Combos({ user }: CombosProps) {
           {filteredTemplates.length === 0 ? (
             <div className="clients-empty-state">
               <strong>Nenhum modelo de combo encontrado</strong>
-              <span>Crie modelos para vender combos aos clientes.</span>
+              <span>
+                {canManageComboTemplates
+                  ? "Crie modelos para vender combos aos clientes."
+                  : "Nenhum modelo ativo está disponível para venda no momento."}
+              </span>
             </div>
           ) : (
             <div className="combo-list">
@@ -730,20 +885,29 @@ export function Combos({ user }: CombosProps) {
                     <button className="table-action-button" onClick={() => setSelectedTemplate(template)} type="button">
                       Ver detalhes
                     </button>
-                    <details className="client-actions-menu">
-                      <summary>Ações</summary>
-                      <div className="client-actions-menu__content">
-                        <button onClick={() => openEditTemplateForm(template)} type="button">
-                          Editar
-                        </button>
-                        <button onClick={() => openClientComboForm(template.id)} type="button">
-                          Vender a cliente
-                        </button>
-                        <button className="client-actions-menu__danger" onClick={() => handleToggleTemplate(template)} type="button">
-                          {template.is_active ? "Desativar" : "Ativar"}
-                        </button>
-                      </div>
-                    </details>
+                    {canLinkComboToClient && !canManageComboTemplates && template.is_active ? (
+                      <button className="table-action-button" onClick={() => openClientComboForm(template.id)} type="button">
+                        Vincular cliente
+                      </button>
+                    ) : null}
+                    {canManageComboTemplates ? (
+                      <details className="client-actions-menu">
+                        <summary>Ações</summary>
+                        <div className="client-actions-menu__content">
+                          <button onClick={() => openEditTemplateForm(template)} type="button">
+                            Editar
+                          </button>
+                          {template.is_active ? (
+                            <button onClick={() => openClientComboForm(template.id)} type="button">
+                              Vender a cliente
+                            </button>
+                          ) : null}
+                          <button className="client-actions-menu__danger" onClick={() => handleToggleTemplate(template)} type="button">
+                            {template.is_active ? "Desativar" : "Ativar"}
+                          </button>
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -803,12 +967,12 @@ export function Combos({ user }: CombosProps) {
                         <button onClick={() => setSelectedClientCombo(combo)} type="button">
                           Histórico de uso
                         </button>
-                        {combo.effective_status !== "cancelled" ? (
+                        {canEditClientCombo && combo.effective_status !== "cancelled" ? (
                           <button onClick={() => openEditClientCombo(combo)} type="button">
                             Editar combo
                           </button>
                         ) : null}
-                        {combo.effective_status !== "cancelled" ? (
+                        {canCancelClientCombo && combo.effective_status !== "cancelled" ? (
                           <button className="client-actions-menu__danger" onClick={() => handleCancelClientCombo(combo)} type="button">
                             Cancelar combo
                           </button>
@@ -823,7 +987,7 @@ export function Combos({ user }: CombosProps) {
         </section>
       )}
 
-      {showTemplateForm ? (
+      {canManageComboTemplates && showTemplateForm ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowTemplateForm(false)}>
           <section className="appointment-modal combo-modal" onMouseDown={(event) => event.stopPropagation()}>
             <div className="appointment-modal__header">
@@ -954,9 +1118,9 @@ export function Combos({ user }: CombosProps) {
         </div>
       ) : null}
 
-      {showClientComboForm ? (
+      {canLinkComboToClient && showClientComboForm ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowClientComboForm(false)}>
-          <section className="appointment-modal combo-modal" onMouseDown={(event) => event.stopPropagation()}>
+          <section className="appointment-modal combo-modal combo-modal--client-link" onMouseDown={(event) => event.stopPropagation()}>
             <div className="appointment-modal__header">
               <div>
                 <h2>Vincular combo ao cliente</h2>
@@ -1009,17 +1173,23 @@ export function Combos({ user }: CombosProps) {
               <label className="field-label">
                 Forma de pagamento
                 <select
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const nextMethod = event.target.value;
+
                     setClientComboForm((form) => ({
                       ...form,
                       payment_installments: "",
-                      purchase_payment_method: event.target.value,
-                    }))
-                  }
+                      purchase_payment_method: nextMethod,
+                    }));
+
+                    setComboSalePaymentItems(
+                      nextMethod === "multiplas" ? [createComboSalePaymentItem(), createComboSalePaymentItem()] : [],
+                    );
+                  }}
                   value={clientComboForm.purchase_payment_method}
                 >
                   <option value="">Selecione</option>
-                  {comboPaymentOptions.map((option) => (
+                  {comboSalePaymentOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -1034,13 +1204,94 @@ export function Combos({ user }: CombosProps) {
                     value={clientComboForm.payment_installments}
                   >
                     <option value="">Selecione</option>
-                    {Array.from({ length: 12 }, (_, index) => index + 1).map((installment) => (
+                    {installmentOptions.map((installment) => (
                       <option key={installment} value={installment}>
                         {installment}x
                       </option>
                     ))}
                   </select>
                 </label>
+              ) : null}
+              {clientComboForm.purchase_payment_method === "multiplas" ? (
+                <div className="payment-split modal-field-wide">
+                  <div className="payment-split__header">
+                    <strong>Formas de pagamento</strong>
+                    <span>Valor do combo: {formatCurrency(comboSalePackagePrice)}</span>
+                  </div>
+
+                  {comboSalePaymentItems.map((item) => (
+                    <div className="payment-split__item" key={item.id}>
+                      <label className="field-label">
+                        Forma
+                        <select
+                          onChange={(event) =>
+                            updateComboSalePaymentItem(item.id, {
+                              installments: "",
+                              method: event.target.value,
+                            })
+                          }
+                          value={item.method}
+                        >
+                          <option value="">Selecione</option>
+                          {comboMultiplePaymentItemOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field-label">
+                        Valor
+                        <input
+                          inputMode="decimal"
+                          onChange={(event) => updateComboSalePaymentItem(item.id, { amount: event.target.value })}
+                          placeholder="0,00"
+                          value={item.amount}
+                        />
+                      </label>
+                      {item.method === "cartao_credito" ? (
+                        <label className="field-label">
+                          Parcelas
+                          <select
+                            onChange={(event) =>
+                              updateComboSalePaymentItem(item.id, { installments: event.target.value })
+                            }
+                            value={item.installments}
+                          >
+                            <option value="">Selecione</option>
+                            {installmentOptions.map((installment) => (
+                              <option key={installment} value={installment}>
+                                {installment}x
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      <button
+                        className="ghost-button"
+                        onClick={() => removeComboSalePaymentItem(item.id)}
+                        type="button"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    className="secondary-button"
+                    onClick={() => setComboSalePaymentItems((items) => [...items, createComboSalePaymentItem()])}
+                    type="button"
+                  >
+                    Adicionar forma
+                  </button>
+                  <p className={comboSaleMultipleDifference === 0 ? "payment-diff payment-diff--ok" : "payment-diff"}>
+                    {comboSaleMultipleDifference > 0
+                      ? `Faltam ${formatCurrency(comboSaleMultipleDifference)}`
+                      : comboSaleMultipleDifference < 0
+                        ? `Valor excede em ${formatCurrency(Math.abs(comboSaleMultipleDifference))}`
+                        : "Pagamento fechado corretamente."}
+                  </p>
+                </div>
               ) : null}
               <label className="field-label modal-field-wide">
                 Observações
@@ -1062,7 +1313,7 @@ export function Combos({ user }: CombosProps) {
         </div>
       ) : null}
 
-      {editingClientCombo ? (
+      {canEditClientCombo && editingClientCombo ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingClientCombo(null)}>
           <section className="appointment-modal combo-modal" onMouseDown={(event) => event.stopPropagation()}>
             <div className="appointment-modal__header">
@@ -1132,14 +1383,20 @@ export function Combos({ user }: CombosProps) {
                 x
               </button>
             </header>
-            <div className="client-side-panel__actions">
-              <button className="primary-button" onClick={() => openClientComboForm(selectedTemplate.id)} type="button">
-                Vender a cliente
-              </button>
-              <button className="secondary-button" onClick={() => openEditTemplateForm(selectedTemplate)} type="button">
-                Editar
-              </button>
-            </div>
+            {(canLinkComboToClient && selectedTemplate.is_active) || canManageComboTemplates ? (
+              <div className="client-side-panel__actions">
+                {canLinkComboToClient && selectedTemplate.is_active ? (
+                  <button className="primary-button" onClick={() => openClientComboForm(selectedTemplate.id)} type="button">
+                    Vincular cliente
+                  </button>
+                ) : null}
+                {canManageComboTemplates ? (
+                  <button className="secondary-button" onClick={() => openEditTemplateForm(selectedTemplate)} type="button">
+                    Editar
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <section className="client-drawer-section">
               <h3>Dados do modelo</h3>
               <dl className="client-detail-grid">

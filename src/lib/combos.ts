@@ -4,25 +4,25 @@ import type { ClientCombo, ComboLinkedType, ComboPaymentMethod, ComboStatus, Com
 export const comboPaymentOptions: { label: string; value: Exclude<ComboPaymentMethod, "combo" | "nao_informado"> }[] = [
   { label: "Dinheiro", value: "dinheiro" },
   { label: "Pix", value: "pix" },
-  { label: "Cartao de debito", value: "cartao_debito" },
-  { label: "Cartao de credito", value: "cartao_credito" },
-  { label: "Transferencia", value: "transferencia" },
+  { label: "Cartão de débito", value: "cartao_debito" },
+  { label: "Cartão de crédito", value: "cartao_credito" },
+  { label: "Transferência", value: "transferencia" },
   { label: "Cortesia", value: "cortesia" },
-  { label: "Multiplas formas", value: "multiplas" },
+  { label: "Múltiplas formas", value: "multiplas" },
   { label: "Outro", value: "outro" },
 ];
 
 export const comboPaymentLabels: Record<ComboPaymentMethod | string, string> = {
-  cartao_credito: "Cartao de credito",
-  cartao_debito: "Cartao de debito",
+  cartao_credito: "Cartão de crédito",
+  cartao_debito: "Cartão de débito",
   combo: "Combo",
   cortesia: "Cortesia",
   dinheiro: "Dinheiro",
-  multiplas: "Multiplas formas",
-  nao_informado: "Nao informado",
+  multiplas: "Múltiplas formas",
+  nao_informado: "Não informado",
   outro: "Outro",
   pix: "Pix",
-  transferencia: "Transferencia",
+  transferencia: "Transferência",
 };
 
 export const comboStatusLabels: Record<ComboStatus, string> = {
@@ -34,7 +34,7 @@ export const comboStatusLabels: Record<ComboStatus, string> = {
 
 export const comboLinkedTypeLabels: Record<ComboLinkedType, string> = {
   category: "Categoria",
-  procedure: "Servico",
+  procedure: "Serviço",
 };
 
 export function parseMoneyValue(value: string | number | null | undefined) {
@@ -56,7 +56,7 @@ export function parseMoneyValue(value: string | number | null | undefined) {
 
 export function formatDateValue(value: string | null | undefined) {
   if (!value) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   const [year, month, day] = value.slice(0, 10).split("-").map(Number);
@@ -105,10 +105,10 @@ export function getComboLinkedLabel(
   },
 ) {
   if (combo.linked_type === "procedure") {
-    return combo.procedure_name ?? combo.procedures?.name ?? "Servico nao informado";
+    return combo.procedure_name ?? combo.procedures?.name ?? "Serviço não informado";
   }
 
-  return combo.category_name ?? combo.procedure_categories?.name ?? "Categoria nao informada";
+  return combo.category_name ?? combo.procedure_categories?.name ?? "Categoria não informada";
 }
 
 export function isComboExpired(combo: Pick<ClientCombo, "expiration_date" | "status">) {
@@ -125,7 +125,7 @@ export function isComboUsable(combo: Pick<ClientCombo, "expiration_date" | "rema
 }
 
 export function getComboBalanceLabel(combo: Pick<ClientCombo, "remaining_sessions" | "total_sessions">) {
-  return `Restam ${combo.remaining_sessions} de ${combo.total_sessions} sessoes`;
+  return `Restam ${combo.remaining_sessions} de ${combo.total_sessions} sessões`;
 }
 
 export function getComboPriceLabel(combo: Pick<ClientCombo | ComboTemplate, "package_price">) {

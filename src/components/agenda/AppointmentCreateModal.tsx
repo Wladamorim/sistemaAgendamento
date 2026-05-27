@@ -256,7 +256,7 @@ export function AppointmentCreateModal({
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
         aria-labelledby="create-appointment-title"
-        className="appointment-modal appointment-modal--wide"
+        className="appointment-modal appointment-modal--wide appointment-modal--create"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="appointment-modal__header">

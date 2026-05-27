@@ -13,6 +13,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 import type { AppUser } from "../types/user";
 
 export type AppRoute =
@@ -45,7 +46,7 @@ const navigationItems: NavigationItem[] = [
   { label: "Profissionais", route: "profissionais" },
   { label: "Serviços", route: "servicos" },
   { label: "Movimentação", route: "movimentacao", adminOnly: true },
-  { label: "Combos", route: "combos", adminOnly: true },
+  { label: "Combos", route: "combos" },
   { label: "Atendentes", route: "atendentes", adminOnly: true },
 ];
 
@@ -90,9 +91,12 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
   return (
     <div className={sidebarIsCollapsed ? "app-shell app-shell--sidebar-collapsed" : "app-shell"}>
       <header className="mobile-app-header">
-        <div>
-          <strong>{activeNavigationItem?.label ?? "AgendeAqui"}</strong>
-          <span>AgendeAqui - {user.role}</span>
+        <div className="mobile-app-header__identity">
+          <BrandLogo variant="mobile" />
+          <div>
+            <strong>{activeNavigationItem?.label ?? "AgendeAqui"}</strong>
+            <span>{user.role}</span>
+          </div>
         </div>
         <button
           aria-expanded={mobileMoreIsOpen}
@@ -107,13 +111,7 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
 
       <aside className="sidebar" aria-label="Menu principal">
         <div className="sidebar__brand">
-          <span className="brand-mark" aria-hidden="true">
-            AA
-          </span>
-          <div>
-            <strong>AgendeAqui</strong>
-            <span>{user.role}</span>
-          </div>
+          <BrandLogo subtitle={user.role} variant="sidebar" />
           <button
             aria-label={sidebarIsCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
             className="sidebar__collapse-button"

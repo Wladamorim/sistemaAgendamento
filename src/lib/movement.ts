@@ -52,16 +52,16 @@ interface PaymentDetailItem {
 }
 
 const paymentLabels: Record<string, string> = {
-  cartao_credito: "Cartao de credito",
-  cartao_debito: "Cartao de debito",
+  cartao_credito: "Cartão de crédito",
+  cartao_debito: "Cartão de débito",
   combo: "Combo",
   cortesia: "Cortesia",
   dinheiro: "Dinheiro",
-  multiplas: "Multiplas formas",
-  nao_informado: "Nao informado",
+  multiplas: "Múltiplas formas",
+  nao_informado: "Não informado",
   outro: "Outro",
   pix: "Pix",
-  transferencia: "Transferencia",
+  transferencia: "Transferência",
 };
 
 export function getPaymentLabel(method: string | null | undefined) {
@@ -111,6 +111,10 @@ export function getAppointmentProductionAmount(appointment: MovementAppointment)
 }
 
 export function getComboSaleCashAmount(sale: MovementComboSale) {
+  if (sale.purchase_payment_method === "cortesia") {
+    return 0;
+  }
+
   const amount = sale.package_price === null ? null : Number(sale.package_price);
 
   return amount !== null && !Number.isNaN(amount) ? amount : 0;

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
 :root {
   color: #14213d;
   background: #eef4f8;
@@ -12803,5 +12805,714 @@ body {
     opacity: 0 !important;
     pointer-events: none !important;
     white-space: nowrap;
+  }
+}
+
+/* Mobile appointment creation modal: keep actions visible above bottom navigation. */
+@media (max-width: 768px) {
+  .modal-backdrop:has(.appointment-modal--create) {
+    z-index: 120 !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .appointment-modal--create {
+    display: flex !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .appointment-modal--create .appointment-modal__header {
+    flex: 0 0 auto;
+    margin: 0 !important;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 12px !important;
+  }
+
+  .appointment-modal--create > .inline-error {
+    flex: 0 0 auto;
+    margin: 10px 16px 0;
+  }
+
+  .appointment-modal--create .appointment-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 18px !important;
+  }
+
+  .appointment-modal--create .appointment-modal__footer {
+    position: relative !important;
+    z-index: 2;
+    display: grid !important;
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr) !important;
+    gap: 10px;
+    margin: 0 !important;
+    border-top: 1px solid var(--color-border);
+    background: #ffffff !important;
+    box-shadow: 0 -14px 34px rgba(15, 23, 42, 0.08);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .appointment-modal--create .appointment-modal__footer button {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .appointment-modal--create .appointment-modal__footer {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Mobile combo sale modal: keep the linking action visible above bottom navigation. */
+@media (max-width: 768px) {
+  .modal-backdrop:has(.combo-modal--client-link) {
+    z-index: 120 !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .combo-modal--client-link {
+    display: flex !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .combo-modal--client-link .appointment-modal__header {
+    flex: 0 0 auto;
+    margin: 0 !important;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 12px !important;
+  }
+
+  .combo-modal--client-link .modal-form-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 0 !important;
+  }
+
+  .combo-modal--client-link .modal-actions {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 2;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr) !important;
+    gap: 10px;
+    margin: 8px -16px 0 !important;
+    border-top: 1px solid var(--color-border);
+    background: #ffffff !important;
+    box-shadow: 0 -14px 34px rgba(15, 23, 42, 0.08);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .combo-modal--client-link .modal-actions button {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .combo-modal--client-link .modal-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Official AgendeAqui identity */
+:root {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #eff6ff;
+  --color-bg: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f9fc;
+  --color-border: #e5eaf2;
+  --color-border-strong: #cbd5e1;
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-muted: #9ca3af;
+  --focus-ring: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body,
+.app-content,
+.auth-shell,
+.loading-shell,
+.app-shell,
+.agenda-page,
+.clients-page,
+.professionals-page,
+.services-page,
+.combos-page,
+.movement-page,
+.attendants-page {
+  background: var(--color-bg) !important;
+  color: var(--color-text);
+}
+
+.brand-logo {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo__image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.brand-logo__subtitle {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-logo--sidebar {
+  display: grid !important;
+  gap: 5px;
+  align-items: start;
+  justify-items: start;
+  overflow: hidden;
+}
+
+.brand-logo--sidebar .brand-logo__image {
+  height: 42px;
+  max-width: 198px;
+}
+
+.brand-logo--login {
+  width: 100%;
+  justify-content: center;
+}
+
+.brand-logo--login .brand-logo__image {
+  height: clamp(58px, 8vw, 76px);
+  max-width: min(100%, 360px);
+}
+
+.brand-logo--mobile {
+  width: 116px;
+  overflow: hidden;
+}
+
+.brand-logo--mobile .brand-logo__image {
+  height: 28px;
+  max-width: 116px;
+}
+
+.brand-block--login {
+  display: grid !important;
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.brand-block--login > div:not(.brand-logo) {
+  display: grid;
+  gap: 5px;
+}
+
+.brand-block--login h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(1.65rem, 4vw, 2rem) !important;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.brand-block--login p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.94rem;
+  font-weight: 550;
+}
+
+.sidebar__brand {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 34px !important;
+  gap: 12px !important;
+  align-items: start !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+.sidebar__brand > .brand-logo {
+  min-width: 0;
+}
+
+.app-shell--sidebar-collapsed .sidebar__brand {
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-items: center !important;
+}
+
+.app-shell--sidebar-collapsed .sidebar__brand .brand-logo,
+.app-shell--sidebar-collapsed .sidebar__brand .brand-logo--sidebar {
+  position: relative !important;
+  display: flex !important;
+  width: 52px !important;
+  height: 44px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+.app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__image {
+  width: 52px;
+  height: 40px;
+  max-width: 52px;
+  object-fit: contain;
+}
+
+.app-shell--sidebar-collapsed .brand-logo__subtitle {
+  display: none !important;
+}
+
+.app-shell--sidebar-collapsed .sidebar__collapse-button {
+  justify-self: center !important;
+}
+
+.mobile-app-header__identity {
+  display: flex !important;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-app-header__identity > div:not(.brand-logo) {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.mobile-app-header__identity strong,
+.mobile-app-header__identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primary-button,
+.add-button,
+.save-button {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+.primary-button:hover,
+.add-button:hover,
+.save-button:hover {
+  border-color: var(--color-primary-hover) !important;
+  background: var(--color-primary-hover) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.search-input:focus-within {
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
+.search-input {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+}
+
+.search-input__icon {
+  color: var(--color-muted) !important;
+}
+
+.search-input:focus-within .search-input__icon {
+  color: var(--color-primary) !important;
+}
+
+.sidebar__link--active,
+.mobile-bottom-nav__item.is-active,
+.mobile-more-menu__item.is-active,
+.filter-chip--active {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
+}
+
+.filter-chip--active {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 640px) {
+  .brand-logo--login .brand-logo__image {
+    height: 58px;
+    max-width: min(100%, 300px);
+  }
+
+  .brand-logo--mobile {
+    width: 104px;
+  }
+
+  .brand-logo--mobile .brand-logo__image {
+    height: 25px;
+    max-width: 104px;
+  }
+}
+
+/* AgendeAqui separated official logo assets */
+.brand-logo {
+  min-width: 0;
+}
+
+.brand-logo__icon,
+.brand-logo__wordmark {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.brand-logo__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.96rem;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-logo--sidebar {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 3px;
+  align-items: center;
+  justify-items: start;
+  overflow: visible;
+}
+
+.brand-logo--sidebar .brand-logo__icon {
+  width: 42px;
+  height: 42px;
+  grid-row: 1 / span 2;
+}
+
+.brand-logo--sidebar .brand-logo__subtitle {
+  grid-column: 2;
+  line-height: 1.1;
+}
+
+.brand-logo--login {
+  display: grid !important;
+  width: 100%;
+  justify-items: center;
+  gap: 12px;
+}
+
+.brand-logo--login .brand-logo__icon {
+  width: clamp(68px, 12vw, 92px);
+  height: clamp(68px, 12vw, 92px);
+}
+
+.brand-logo--login .brand-logo__wordmark {
+  height: clamp(34px, 5vw, 46px);
+  max-width: min(100%, 300px);
+}
+
+.brand-logo--mobile {
+  display: inline-flex !important;
+  width: auto;
+  max-width: 132px;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.brand-logo--mobile .brand-logo__icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.brand-logo--mobile .brand-logo__name {
+  font-size: 0.86rem;
+}
+
+.app-shell--sidebar-collapsed .sidebar__brand .brand-logo,
+.app-shell--sidebar-collapsed .sidebar__brand .brand-logo--sidebar {
+  display: grid !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  place-items: center !important;
+  overflow: visible !important;
+}
+
+.app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__icon {
+  width: 40px;
+  height: 40px;
+  grid-row: auto;
+}
+
+.app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__name,
+.app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__subtitle {
+  display: none !important;
+}
+
+@media (max-width: 380px) {
+  .brand-logo--mobile .brand-logo__name {
+    display: none;
+  }
+
+  .brand-logo--mobile {
+    max-width: 32px;
+  }
+}
+
+/* Collapsed sidebar alignment only */
+@media (min-width: 769px) {
+  .app-shell--sidebar-collapsed .sidebar {
+    align-items: center !important;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__brand,
+  .app-shell--sidebar-collapsed .sidebar__nav,
+  .app-shell--sidebar-collapsed .sidebar__footer {
+    width: 100% !important;
+    justify-items: center !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .brand-logo--sidebar,
+  .app-shell--sidebar-collapsed .sidebar__collapse-button,
+  .app-shell--sidebar-collapsed .sidebar__link,
+  .app-shell--sidebar-collapsed .sidebar__signout {
+    margin-right: auto !important;
+    margin-left: auto !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__link {
+    justify-content: center !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+}
+
+/* Collapsed sidebar final alignment */
+@media (min-width: 769px) {
+  .app-shell--sidebar-collapsed {
+    grid-template-columns: 76px minmax(0, 1fr) !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar {
+    display: flex !important;
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    padding: 18px 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__brand {
+    display: flex !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    box-sizing: border-box !important;
+    margin: 0 0 16px !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    padding: 0 0 14px !important;
+  }
+
+  .app-shell--sidebar-collapsed .brand-logo--sidebar {
+    display: grid !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    place-items: center !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__icon {
+    display: block !important;
+    width: 40px !important;
+    height: 40px !important;
+    margin: 0 !important;
+    object-fit: contain !important;
+  }
+
+  .app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__name,
+  .app-shell--sidebar-collapsed .brand-logo--sidebar .brand-logo__subtitle {
+    display: none !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__collapse-button {
+    position: static !important;
+    inset: auto !important;
+    display: grid !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    place-items: center !important;
+    align-self: center !important;
+    justify-self: center !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__collapse-button svg {
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__nav {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__link {
+    display: grid !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    place-items: center !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__icon {
+    display: block !important;
+    width: 20px !important;
+    min-width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__link-label {
+    display: none !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__footer {
+    display: flex !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    margin: 16px 0 0 !important;
+    border-top: 1px solid var(--color-border) !important;
+    padding: 14px 0 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar-user-card {
+    display: none !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__signout {
+    display: grid !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    place-items: center !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__signout-icon {
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+  }
+
+  .app-shell--sidebar-collapsed .sidebar__signout-label {
+    display: none !important;
   }
 }
