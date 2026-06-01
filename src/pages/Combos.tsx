@@ -174,6 +174,45 @@ function normalizeTemplate(rawTemplate: ComboTemplate): ComboTemplate {
   };
 }
 
+function getSupabaseMessage(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  return "message" in error && typeof error.message === "string" ? error.message : "";
+}
+
+function getSupabaseCode(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  return "code" in error && typeof error.code === "string" ? error.code : "";
+}
+
+function isPermissionError(error: unknown) {
+  const message = getSupabaseMessage(error).toLowerCase();
+  const code = getSupabaseCode(error);
+
+  return (
+    code === "42501" ||
+    message.includes("permission") ||
+    message.includes("permiss") ||
+    message.includes("policy") ||
+    message.includes("rls") ||
+    message.includes("row-level")
+  );
+}
+
+function getComboLoadErrorMessage(error: unknown) {
+  if (isPermissionError(error)) {
+    return "Sem permissão para listar combos.";
+  }
+
+  const message = getSupabaseMessage(error);
+  return message ? `Não foi possível carregar combos: ${message}` : "Não foi possível carregar combos.";
+}
+
 export function Combos({ user }: CombosProps) {
   const [activeTab, setActiveTab] = useState<ComboTab>("templates");
   const [templates, setTemplates] = useState<ComboTemplate[]>([]);
@@ -198,6 +237,9 @@ export function Combos({ user }: CombosProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const [templateErrorMessage, setTemplateErrorMessage] = useState<string | null>(null);
+  const [clientComboErrorMessage, setClientComboErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const canManageComboTemplates = isAdmin(user);
@@ -248,12 +290,16 @@ export function Combos({ user }: CombosProps) {
   async function loadCombos() {
     setIsLoading(true);
     setErrorMessage(null);
+    setLoadErrorMessage(null);
+    setTemplateErrorMessage(null);
+    setClientComboErrorMessage(null);
+
+    const templatesQuery = canManageComboTemplates
+      ? supabase.from("combo_templates").select("*").order("created_at", { ascending: false })
+      : supabase.from("combo_templates").select("*").eq("is_active", true).order("created_at", { ascending: false });
 
     const [templatesResult, clientCombosResult, clientsResult, proceduresResult, categoriesResult] = await Promise.all([
-      supabase
-        .from("combo_templates")
-        .select("*, procedures ( id, name, price, duration_minutes, category_id ), procedure_categories ( id, name )")
-        .order("created_at", { ascending: false }),
+      templatesQuery,
       supabase
         .from("v_client_combos_full")
         .select("*")
@@ -271,26 +317,60 @@ export function Combos({ user }: CombosProps) {
       supabase.from("procedure_categories").select("id, name, description, is_active").neq("is_active", false).order("name"),
     ]);
 
-    if (templatesResult.error || clientCombosResult.error || clientsResult.error || proceduresResult.error || categoriesResult.error) {
-      const error =
-        templatesResult.error ??
-        clientCombosResult.error ??
-        clientsResult.error ??
-        proceduresResult.error ??
-        categoriesResult.error;
-      console.error("COMBOS LOAD ERROR:", error);
-      setErrorMessage(
-        "Não foi possível carregar Combos. Verifique se a migration 20260526000000_create_combos.sql foi aplicada no Supabase.",
-      );
-      setIsLoading(false);
-      return;
+    console.log("[Combos] Usuário atual:", user);
+    console.log("[Combos] Role atual:", user.role);
+    console.log("[Combos] combo_templates data:", templatesResult.data ?? []);
+    console.log("[Combos] combo_templates error:", templatesResult.error);
+    console.log("[Combos] v_client_combos_full data:", clientCombosResult.data ?? []);
+    console.log("[Combos] v_client_combos_full error:", clientCombosResult.error);
+    console.log("[Combos] clients error:", clientsResult.error);
+    console.log("[Combos] procedures error:", proceduresResult.error);
+    console.log("[Combos] categories error:", categoriesResult.error);
+
+    // Carregar templates (crítico para a tela)
+    if (templatesResult.error) {
+      console.error("[Combos] TEMPLATES LOAD ERROR:", templatesResult.error);
+      const templateMsg = getComboLoadErrorMessage(templatesResult.error);
+      setTemplateErrorMessage(templateMsg);
+      setErrorMessage(templateMsg);
+    } else {
+      setTemplates(((templatesResult.data ?? []) as ComboTemplate[]).map(normalizeTemplate));
     }
 
-    setTemplates(((templatesResult.data ?? []) as ComboTemplate[]).map(normalizeTemplate));
-    setClientCombos((clientCombosResult.data ?? []) as ClientComboFull[]);
-    setClients((clientsResult.data ?? []) as ClientRecord[]);
-    setProcedures((proceduresResult.data ?? []) as ServiceRecord[]);
-    setCategories((categoriesResult.data ?? []) as ServiceCategory[]);
+    // Carregar combos de clientes (opcional - não bloqueia templates)
+    if (clientCombosResult.error) {
+      console.error("[Combos] CLIENT COMBOS LOAD ERROR:", clientCombosResult.error);
+      const clientMsg = getComboLoadErrorMessage(clientCombosResult.error);
+      setClientComboErrorMessage(clientMsg);
+      // Apenas exibir erro se também falhar em templates
+      if (!templatesResult.error) {
+        console.warn("[Combos] Templates carregados mas client combos falharam");
+      }
+    } else {
+      setClientCombos((clientCombosResult.data ?? []) as ClientComboFull[]);
+    }
+
+    // Carregar clientes (suportivo)
+    if (!clientsResult.error) {
+      setClients((clientsResult.data ?? []) as ClientRecord[]);
+    } else {
+      console.warn("[Combos] Falha ao carregar clientes:", clientsResult.error);
+    }
+
+    // Carregar procedimentos (suportivo)
+    if (!proceduresResult.error) {
+      setProcedures((proceduresResult.data ?? []) as ServiceRecord[]);
+    } else {
+      console.warn("[Combos] Falha ao carregar procedimentos:", proceduresResult.error);
+    }
+
+    // Carregar categorias (suportivo)
+    if (!categoriesResult.error) {
+      setCategories((categoriesResult.data ?? []) as ServiceCategory[]);
+    } else {
+      console.warn("[Combos] Falha ao carregar categorias:", categoriesResult.error);
+    }
+
     setIsLoading(false);
   }
 
@@ -719,7 +799,7 @@ export function Combos({ user }: CombosProps) {
           [
             template.name,
             template.description,
-            getComboLinkedLabel(template),
+            getTemplateLinkedLabel(template),
             comboLinkedTypeLabels[template.linked_type],
           ]
             .filter(Boolean)
@@ -728,7 +808,7 @@ export function Combos({ user }: CombosProps) {
 
       return matchesFilter && matchesSearch;
     });
-  }, [canManageComboTemplates, filter, searchTerm, templates]);
+  }, [canManageComboTemplates, categories, filter, procedures, searchTerm, templates]);
 
   const filteredClientCombos = useMemo(() => {
     const searchValue = normalizeSearch(searchTerm);
@@ -766,6 +846,17 @@ export function Combos({ user }: CombosProps) {
     0,
   );
   const comboSaleMultipleDifference = Number((comboSalePackagePrice - comboSaleMultipleTotal).toFixed(2));
+
+  function getTemplateLinkedLabel(template: ComboTemplate) {
+    if (template.linked_type === "procedure") {
+      return (
+        procedures.find((procedure) => procedure.id === template.procedure_id)?.name ??
+        getComboLinkedLabel(template)
+      );
+    }
+
+    return categories.find((category) => category.id === template.category_id)?.name ?? getComboLinkedLabel(template);
+  }
 
   return (
     <main className="combos-page">
@@ -841,7 +932,12 @@ export function Combos({ user }: CombosProps) {
         </section>
       ) : activeTab === "templates" ? (
         <section className="clients-table-panel service-list-panel combo-list-panel">
-          {filteredTemplates.length === 0 ? (
+          {templateErrorMessage && templates.length === 0 ? (
+            <div className="clients-empty-state">
+              <strong>Não foi possível listar modelos de combos</strong>
+              <span>{templateErrorMessage}</span>
+            </div>
+          ) : filteredTemplates.length === 0 ? (
             <div className="clients-empty-state">
               <strong>Nenhum modelo de combo encontrado</strong>
               <span>
@@ -868,7 +964,7 @@ export function Combos({ user }: CombosProps) {
                   </button>
                   <div className="combo-list-row__meta">
                     <strong>{comboLinkedTypeLabels[template.linked_type]}</strong>
-                    <span>{getComboLinkedLabel(template)}</span>
+                    <span>{getTemplateLinkedLabel(template)}</span>
                   </div>
                   <div className="combo-list-row__meta">
                     <strong>
@@ -916,7 +1012,12 @@ export function Combos({ user }: CombosProps) {
         </section>
       ) : (
         <section className="clients-table-panel service-list-panel combo-list-panel">
-          {filteredClientCombos.length === 0 ? (
+          {clientComboErrorMessage && clientCombos.length === 0 ? (
+            <div className="clients-empty-state">
+              <strong>Não foi possível listar combos de clientes</strong>
+              <span>{clientComboErrorMessage}</span>
+            </div>
+          ) : filteredClientCombos.length === 0 ? (
             <div className="clients-empty-state">
               <strong>Nenhum combo de cliente encontrado</strong>
               <span>Vincule um combo a um cliente para acompanhar saldo e uso.</span>
@@ -1377,7 +1478,7 @@ export function Combos({ user }: CombosProps) {
                   {getTemplateStatus(selectedTemplate)}
                 </span>
                 <h2>{selectedTemplate.name}</h2>
-                <p>{getComboLinkedLabel(selectedTemplate)}</p>
+                <p>{getTemplateLinkedLabel(selectedTemplate)}</p>
               </div>
               <button className="icon-button" onClick={() => setSelectedTemplate(null)} type="button">
                 x

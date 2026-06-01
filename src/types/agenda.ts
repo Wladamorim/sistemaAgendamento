@@ -75,6 +75,7 @@ export interface AppointmentDetails {
   client: Client | null;
   procedure: Procedure | null;
   professional: Professional | null;
+  appointment_items?: AppointmentItem[] | null;
 }
 
 export interface SelectedAgendaSlot {
@@ -89,4 +90,31 @@ export interface ScheduleBlock {
   start_time: string;
   end_time: string;
   reason: string | null;
+}
+
+export interface AppointmentItem {
+  id: string;
+  appointment_id: string;
+  procedure_id: string;
+  professional_id: string | null;
+  duration_minutes: number;
+  price_at_booking: number | string;
+  payment_method: string | null;
+  payment_installments: number | null;
+  payment_details: unknown | null;
+  paid_amount: number | string | null;
+  combo_usage_id: string | null;
+  created_at: string;
+  updated_at: string;
+  procedure?: Procedure | null;
+  professional?: Professional | null;
+}
+
+export interface AppointmentItemPaymentForm {
+  appointment_item_id: string;
+  payment_method: string;
+  client_combo_id?: string | null;
+  payment_installments?: number | null;
+  payment_details?: unknown | null;
+  paid_amount: number | string;
 }

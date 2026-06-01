@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MessageCircle } from "lucide-react";
 import {
   addMinutesToTime,
   formatCurrency,
@@ -82,6 +83,18 @@ function displayValue(value: string | number | null | undefined) {
   }
 
   return String(value);
+}
+
+function normalizePhoneForWhatsApp(phone: string | null | undefined) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  const normalizedPhone = digits.startsWith("55") ? digits : `55${digits}`;
+
+  return normalizedPhone.length >= 12 ? normalizedPhone : null;
 }
 
 function getComboPaymentInfo(paymentDetails: unknown) {
@@ -882,12 +895,41 @@ export function AppointmentDetailsModal({
       (multiplePayments.filter((item) => item.method && parseCurrencyInput(item.amount) > 0).length >= 2 &&
         !hasInvalidMultipleCredit &&
         Math.abs(multiplePaymentDifference) <= 0.009));
+  const whatsappPhoneSource = details?.client?.phone ?? appointment.client_phone ?? "";
+  const hasWhatsappPhone = Boolean(whatsappPhoneSource.trim());
+  const canContactOnWhatsApp = Boolean(details && details.status_code !== "cancelled");
+
+  function handleOpenWhatsApp() {
+    if (!hasWhatsappPhone) {
+      setErrorMessage("Cliente sem telefone cadastrado.");
+      return;
+    }
+
+    const whatsappPhone = normalizePhoneForWhatsApp(whatsappPhoneSource);
+
+    if (!whatsappPhone) {
+      setErrorMessage("Telefone do cliente inv\u00e1lido para WhatsApp.");
+      return;
+    }
+
+    const clientName = details?.client?.full_name ?? appointment.client_name ?? "cliente";
+    const procedureName = details?.procedure?.name ?? appointment.procedure_name ?? "";
+    const formattedDate = detailDate ? formatDate(detailDate) : "";
+    const formattedTime = details?.start_time ? formatTime(details.start_time) : "";
+    const hasFullAppointmentData = Boolean(procedureName && formattedDate && formattedTime);
+    const message = hasFullAppointmentData
+      ? `Ol\u00e1, ${clientName}! Tudo bem?\n\nEstamos passando para confirmar seu agendamento:\n\nServi\u00e7o: ${procedureName}\nData: ${formattedDate}\nHor\u00e1rio: ${formattedTime}\n\nPodemos confirmar sua presen\u00e7a?`
+      : `Ol\u00e1, ${clientName}! Tudo bem? Estamos entrando em contato sobre seu agendamento.`;
+    const url = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
         aria-labelledby="appointment-details-title"
-        className="appointment-modal"
+        className="appointment-modal appointment-modal--details"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="appointment-modal__header">
@@ -900,11 +942,12 @@ export function AppointmentDetailsModal({
           </button>
         </div>
 
+        <div className="appointment-modal__body appointment-modal__body--details">
         {isLoading ? <p className="muted-text">Carregando detalhes...</p> : null}
         {errorMessage ? <p className="inline-error">{errorMessage}</p> : null}
 
         {details ? (
-          <div className="details-list">
+          <div className="details-list details-list--appointment">
             <div>
               <span>Cliente</span>
               <strong>{displayValue(details.client?.full_name ?? appointment.client_name)}</strong>
@@ -985,6 +1028,20 @@ export function AppointmentDetailsModal({
               <span>Restrições</span>
               <strong>{displayValue(details.client?.restrictions)}</strong>
             </div>
+          </div>
+        ) : null}
+
+        {details && canContactOnWhatsApp ? (
+          <div className="appointment-whatsapp-action">
+            <button
+              className="secondary-button whatsapp-button"
+              disabled={!hasWhatsappPhone}
+              onClick={handleOpenWhatsApp}
+              type="button"
+            >
+              <MessageCircle aria-hidden="true" />
+              {hasWhatsappPhone ? "Chamar no WhatsApp" : "Cliente sem telefone cadastrado"}
+            </button>
           </div>
         ) : null}
 
@@ -1367,6 +1424,7 @@ export function AppointmentDetailsModal({
             </button>
           </section>
         ) : null}
+        </div>
       </section>
     </div>
   );
