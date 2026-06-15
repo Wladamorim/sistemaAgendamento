@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { X } from "lucide-react";
 import { isAdmin } from "../components/AppShell";
+import { AppDatePicker } from "../components/ui/AppDatePicker";
 import { SearchInput } from "../components/ui/SearchInput";
 import {
   comboLinkedTypeLabels,
@@ -395,6 +397,7 @@ export function Combos({ user }: CombosProps) {
 
     setEditingTemplate(template);
     setTemplateForm(templateToForm(template));
+    setSelectedTemplate(null);
     setShowTemplateForm(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -412,6 +415,7 @@ export function Combos({ user }: CombosProps) {
       start_date: formatDateForQuery(new Date()),
     });
     setComboSalePaymentItems([]);
+    setSelectedTemplate(null);
     setShowClientComboForm(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -442,6 +446,7 @@ export function Combos({ user }: CombosProps) {
       notes: combo.notes ?? "",
       total_sessions: String(combo.total_sessions),
     });
+    setSelectedClientCombo(null);
     setErrorMessage(null);
     setSuccessMessage(null);
   }
@@ -541,6 +546,11 @@ export function Combos({ user }: CombosProps) {
 
     setIsSaving(false);
     setSuccessMessage(template.is_active ? "Modelo desativado com sucesso." : "Modelo ativado com sucesso.");
+    setSelectedTemplate((currentTemplate) =>
+      currentTemplate?.id === template.id
+        ? { ...currentTemplate, is_active: !template.is_active }
+        : currentTemplate,
+    );
     await loadCombos();
   }
 
@@ -780,6 +790,7 @@ export function Combos({ user }: CombosProps) {
     }
 
     setIsSaving(false);
+    setSelectedClientCombo(null);
     setSuccessMessage("Combo do cliente cancelado com sucesso.");
     await loadCombos();
   }
@@ -837,6 +848,13 @@ export function Combos({ user }: CombosProps) {
   const selectedClientComboTemplate = useMemo(
     () => templates.find((template) => template.id === clientComboForm.combo_template_id) ?? null,
     [clientComboForm.combo_template_id, templates],
+  );
+  const selectedTemplateClientCombos = useMemo(
+    () =>
+      selectedTemplate
+        ? clientCombos.filter((combo) => combo.combo_template_id === selectedTemplate.id)
+        : [],
+    [clientCombos, selectedTemplate],
   );
   const comboSalePackagePrice = selectedClientComboTemplate
     ? parseMoneyValue(selectedClientComboTemplate.package_price)
@@ -1263,14 +1281,12 @@ export function Combos({ user }: CombosProps) {
                     ))}
                 </select>
               </label>
-              <label className="field-label">
-                Data de inicio
-                <input
-                  onChange={(event) => setClientComboForm((form) => ({ ...form, start_date: event.target.value }))}
-                  type="date"
-                  value={clientComboForm.start_date}
-                />
-              </label>
+              <AppDatePicker
+                className="field-label"
+                label="Data de início"
+                onChange={(value) => setClientComboForm((form) => ({ ...form, start_date: value }))}
+                value={clientComboForm.start_date}
+              />
               <label className="field-label">
                 Forma de pagamento
                 <select
@@ -1439,16 +1455,14 @@ export function Combos({ user }: CombosProps) {
                   value={clientComboEditForm.total_sessions}
                 />
               </label>
-              <label className="field-label">
-                Validade
-                <input
-                  onChange={(event) =>
-                    setClientComboEditForm((form) => ({ ...form, expiration_date: event.target.value }))
-                  }
-                  type="date"
-                  value={clientComboEditForm.expiration_date}
-                />
-              </label>
+              <AppDatePicker
+                className="field-label"
+                label="Validade"
+                onChange={(value) =>
+                  setClientComboEditForm((form) => ({ ...form, expiration_date: value }))
+                }
+                value={clientComboEditForm.expiration_date}
+              />
               <label className="field-label modal-field-wide">
                 Observações
                 <textarea
@@ -1470,72 +1484,157 @@ export function Combos({ user }: CombosProps) {
       ) : null}
 
       {selectedTemplate ? (
-        <div className="client-drawer-backdrop" role="presentation" onMouseDown={() => setSelectedTemplate(null)}>
-          <aside className="client-side-panel combo-side-panel" onMouseDown={(event) => event.stopPropagation()}>
-            <header className="client-side-panel__header">
-              <div>
+        <div
+          className="modal-backdrop combo-detail-modal-overlay"
+          role="presentation"
+          onMouseDown={() => setSelectedTemplate(null)}
+        >
+          <section
+            aria-labelledby="combo-template-detail-title"
+            aria-modal="true"
+            className="appointment-modal combo-detail-modal"
+            role="dialog"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="appointment-modal__header combo-detail-modal__header">
+              <div className="combo-detail-modal__heading">
                 <span className={selectedTemplate.is_active ? "status-pill status-pill--active" : "status-pill"}>
                   {getTemplateStatus(selectedTemplate)}
                 </span>
-                <h2>{selectedTemplate.name}</h2>
+                <h2 id="combo-template-detail-title">{selectedTemplate.name}</h2>
                 <p>{getTemplateLinkedLabel(selectedTemplate)}</p>
               </div>
-              <button className="icon-button" onClick={() => setSelectedTemplate(null)} type="button">
-                x
+              <button
+                aria-label="Fechar detalhe do combo"
+                className="icon-button"
+                onClick={() => setSelectedTemplate(null)}
+                title="Fechar"
+                type="button"
+              >
+                <X aria-hidden="true" />
               </button>
             </header>
+
             {(canLinkComboToClient && selectedTemplate.is_active) || canManageComboTemplates ? (
-              <div className="client-side-panel__actions">
+              <div className="combo-detail-modal__actions">
                 {canLinkComboToClient && selectedTemplate.is_active ? (
-                  <button className="primary-button" onClick={() => openClientComboForm(selectedTemplate.id)} type="button">
+                  <button
+                    className="primary-button"
+                    disabled={isSaving}
+                    onClick={() => openClientComboForm(selectedTemplate.id)}
+                    type="button"
+                  >
                     Vincular cliente
                   </button>
                 ) : null}
                 {canManageComboTemplates ? (
-                  <button className="secondary-button" onClick={() => openEditTemplateForm(selectedTemplate)} type="button">
-                    Editar
-                  </button>
+                  <>
+                    <button
+                      className="secondary-button"
+                      disabled={isSaving}
+                      onClick={() => openEditTemplateForm(selectedTemplate)}
+                      type="button"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className={selectedTemplate.is_active ? "danger-button" : "secondary-button"}
+                      disabled={isSaving}
+                      onClick={() => void handleToggleTemplate(selectedTemplate)}
+                      type="button"
+                    >
+                      {isSaving ? "Salvando..." : selectedTemplate.is_active ? "Desativar" : "Ativar"}
+                    </button>
+                  </>
                 ) : null}
               </div>
             ) : null}
-            <section className="client-drawer-section">
-              <h3>Dados do modelo</h3>
-              <dl className="client-detail-grid">
-                <div>
-                  <dt>Tipo</dt>
-                  <dd>{comboLinkedTypeLabels[selectedTemplate.linked_type]}</dd>
+
+            <div className="appointment-modal__body combo-detail-modal__body">
+              <section className="combo-detail-section">
+                <h3>Dados do modelo</h3>
+                <dl className="combo-detail-info-grid">
+                  <div>
+                    <dt>Tipo</dt>
+                    <dd>{comboLinkedTypeLabels[selectedTemplate.linked_type]}</dd>
+                  </div>
+                  <div>
+                    <dt>Sessões</dt>
+                    <dd>{selectedTemplate.total_sessions}</dd>
+                  </div>
+                  <div>
+                    <dt>Validade</dt>
+                    <dd>{selectedTemplate.validity_days} dias</dd>
+                  </div>
+                  <div>
+                    <dt>Valor</dt>
+                    <dd>{getComboPriceLabel(selectedTemplate)}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="combo-detail-section">
+                <h3>Descrição</h3>
+                <div className="combo-detail-text-card">
+                  <p>{selectedTemplate.description || "Sem descrição cadastrada."}</p>
                 </div>
-                <div>
-                  <dt>Sessoes</dt>
-                  <dd>{selectedTemplate.total_sessions}</dd>
+              </section>
+
+              <section className="combo-detail-section">
+                <h3>Observações</h3>
+                <div className="combo-detail-text-card">
+                  <p>{selectedTemplate.notes || "Sem observações cadastradas."}</p>
                 </div>
-                <div>
-                  <dt>Validade</dt>
-                  <dd>{selectedTemplate.validity_days} dias</dd>
+              </section>
+
+              <section className="combo-detail-section">
+                <div className="combo-detail-section__header">
+                  <h3>Clientes vinculados</h3>
+                  <span>{selectedTemplateClientCombos.length}</span>
                 </div>
-                <div>
-                  <dt>Valor</dt>
-                  <dd>{getComboPriceLabel(selectedTemplate)}</dd>
-                </div>
-              </dl>
-              <div className="client-notes-box">
-                <span>Descrição</span>
-                <p>{selectedTemplate.description || "Sem descrição cadastrada."}</p>
-              </div>
-              <div className="client-notes-box">
-                <span>Observações</span>
-                <p>{selectedTemplate.notes || "Sem observações cadastradas."}</p>
-              </div>
-            </section>
-          </aside>
+                {clientComboErrorMessage ? (
+                  <div className="client-panel-empty">{clientComboErrorMessage}</div>
+                ) : selectedTemplateClientCombos.length === 0 ? (
+                  <div className="client-panel-empty">Nenhum cliente vinculado a este combo.</div>
+                ) : (
+                  <ul className="combo-detail-client-list">
+                    {selectedTemplateClientCombos.map((combo) => (
+                      <li className="combo-detail-client-card" key={combo.id}>
+                        <div>
+                          <strong>{combo.client_name ?? "Cliente não informado"}</strong>
+                          <span>{combo.client_phone || getComboLinkedLabel(combo)}</span>
+                        </div>
+                        <div>
+                          <strong>{getComboBalanceLabel(combo)}</strong>
+                          <span>
+                            Validade: {formatDateValue(combo.expiration_date)} · {getClientComboStatus(combo)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </section>
         </div>
       ) : null}
 
       {selectedClientCombo ? (
-        <div className="client-drawer-backdrop" role="presentation" onMouseDown={() => setSelectedClientCombo(null)}>
-          <aside className="client-side-panel combo-side-panel" onMouseDown={(event) => event.stopPropagation()}>
-            <header className="client-side-panel__header">
-              <div>
+        <div
+          className="modal-backdrop combo-detail-modal-overlay"
+          role="presentation"
+          onMouseDown={() => setSelectedClientCombo(null)}
+        >
+          <section
+            aria-labelledby="client-combo-detail-title"
+            aria-modal="true"
+            className="appointment-modal combo-detail-modal"
+            role="dialog"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="appointment-modal__header combo-detail-modal__header">
+              <div className="combo-detail-modal__heading">
                 <span
                   className={
                     selectedClientCombo.effective_status === "active"
@@ -1545,93 +1644,132 @@ export function Combos({ user }: CombosProps) {
                 >
                   {getClientComboStatus(selectedClientCombo)}
                 </span>
-                <h2>{selectedClientCombo.name}</h2>
+                <h2 id="client-combo-detail-title">{selectedClientCombo.name}</h2>
                 <p>{selectedClientCombo.client_name ?? "Cliente não informado"}</p>
               </div>
-              <button className="icon-button" onClick={() => setSelectedClientCombo(null)} type="button">
-                x
+              <button
+                aria-label="Fechar detalhe do combo"
+                className="icon-button"
+                onClick={() => setSelectedClientCombo(null)}
+                title="Fechar"
+                type="button"
+              >
+                <X aria-hidden="true" />
               </button>
             </header>
-            <section className="client-drawer-section">
-              <h3>Resumo do combo</h3>
-              <div className="client-summary-grid">
-                <div>
-                  <span>Sessoes restantes</span>
-                  <strong>{selectedClientCombo.remaining_sessions}</strong>
-                </div>
-                <div>
-                  <span>Sessoes usadas</span>
-                  <strong>{selectedClientCombo.used_sessions}</strong>
-                </div>
-                <div>
-                  <span>Validade</span>
-                  <strong>{formatDateValue(selectedClientCombo.expiration_date)}</strong>
-                </div>
-                <div>
-                  <span>Valor pago</span>
-                  <strong>{getComboPriceLabel(selectedClientCombo)}</strong>
-                </div>
+
+            {(canEditClientCombo || canCancelClientCombo) && selectedClientCombo.effective_status !== "cancelled" ? (
+              <div className="combo-detail-modal__actions">
+                {canEditClientCombo ? (
+                  <button
+                    className="secondary-button"
+                    disabled={isSaving}
+                    onClick={() => openEditClientCombo(selectedClientCombo)}
+                    type="button"
+                  >
+                    Editar combo
+                  </button>
+                ) : null}
+                {canCancelClientCombo ? (
+                  <button
+                    className="danger-button"
+                    disabled={isSaving}
+                    onClick={() => void handleCancelClientCombo(selectedClientCombo)}
+                    type="button"
+                  >
+                    Cancelar combo
+                  </button>
+                ) : null}
               </div>
-            </section>
-            <section className="client-drawer-section">
-              <h3>Dados da compra</h3>
-              <dl className="client-detail-grid">
-                <div>
-                  <dt>Vinculo</dt>
-                  <dd>{getComboLinkedLabel(selectedClientCombo)}</dd>
+            ) : null}
+
+            <div className="appointment-modal__body combo-detail-modal__body">
+              <section className="combo-detail-section">
+                <h3>Resumo do combo</h3>
+                <dl className="combo-detail-info-grid">
+                  <div>
+                    <dt>Sessões restantes</dt>
+                    <dd>{selectedClientCombo.remaining_sessions}</dd>
+                  </div>
+                  <div>
+                    <dt>Sessões usadas</dt>
+                    <dd>{selectedClientCombo.used_sessions}</dd>
+                  </div>
+                  <div>
+                    <dt>Validade</dt>
+                    <dd>{formatDateValue(selectedClientCombo.expiration_date)}</dd>
+                  </div>
+                  <div>
+                    <dt>Valor pago</dt>
+                    <dd>{getComboPriceLabel(selectedClientCombo)}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="combo-detail-section">
+                <h3>Dados da compra</h3>
+                <dl className="combo-detail-info-grid">
+                  <div>
+                    <dt>Vínculo</dt>
+                    <dd>{getComboLinkedLabel(selectedClientCombo)}</dd>
+                  </div>
+                  <div>
+                    <dt>Forma de pagamento</dt>
+                    <dd>{getComboPaymentLabel(selectedClientCombo.purchase_payment_method)}</dd>
+                  </div>
+                  <div>
+                    <dt>Início</dt>
+                    <dd>{formatDateValue(selectedClientCombo.start_date)}</dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{getClientComboStatus(selectedClientCombo)}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="combo-detail-section">
+                <h3>Observações</h3>
+                <div className="combo-detail-text-card">
+                  <p>{selectedClientCombo.notes || "Sem observações cadastradas."}</p>
                 </div>
-                <div>
-                  <dt>Forma de pagamento</dt>
-                  <dd>{getComboPaymentLabel(selectedClientCombo.purchase_payment_method)}</dd>
-                </div>
-                <div>
-                  <dt>Inicio</dt>
-                  <dd>{formatDateValue(selectedClientCombo.start_date)}</dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>{getClientComboStatus(selectedClientCombo)}</dd>
-                </div>
-              </dl>
-              <div className="client-notes-box">
-                <span>Observações</span>
-                <p>{selectedClientCombo.notes || "Sem observações cadastradas."}</p>
-              </div>
-            </section>
-            <section className="client-drawer-section">
-              <h3>Histórico de uso</h3>
-              {comboUsages.length === 0 ? (
-                <div className="client-panel-empty">Nenhuma sessão usada neste combo.</div>
-              ) : (
-                <ul className="client-history-list">
-                  {comboUsages.map((usage) => (
-                    <li className="client-history-item" key={usage.id}>
-                      <div>
-                        <strong>{usage.procedure_name ?? "Serviço não informado"}</strong>
-                        <span>{usage.professional_name ?? "Profissional não informado"}</span>
-                      </div>
-                      <div>
-                        <span>
-                          {usage.used_at
-                            ? new Intl.DateTimeFormat("pt-BR", {
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              }).format(new Date(usage.used_at))
-                            : "Data não informada"}
-                        </span>
-                        <span>
-                          {usage.sessions_used} sessão · Produção {formatCurrency(usage.production_value)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </aside>
+              </section>
+
+              <section className="combo-detail-section">
+                <h3>Histórico de uso</h3>
+                {comboUsages.length === 0 ? (
+                  <div className="client-panel-empty">Nenhuma sessão usada neste combo.</div>
+                ) : (
+                  <ul className="client-history-list combo-detail-usage-list">
+                    {comboUsages.map((usage) => (
+                      <li className="client-history-item" key={usage.id}>
+                        <div>
+                          <strong>{usage.procedure_name ?? "Serviço não informado"}</strong>
+                          <span>{usage.professional_name ?? "Profissional não informado"}</span>
+                        </div>
+                        <div>
+                          <span>
+                            {usage.used_at
+                              ? new Intl.DateTimeFormat("pt-BR", {
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }).format(new Date(usage.used_at))
+                              : "Data não informada"}
+                          </span>
+                          <span>
+                            {usage.sessions_used} sessão · Produção {formatCurrency(usage.production_value)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </section>
         </div>
       ) : null}
     </main>

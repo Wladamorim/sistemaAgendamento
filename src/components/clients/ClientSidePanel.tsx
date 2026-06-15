@@ -138,10 +138,16 @@ export function ClientSidePanel({
   }, [client.id]);
 
   return (
-    <div className="client-drawer-backdrop" role="presentation" onMouseDown={onClose}>
+    <div
+      className="client-drawer-backdrop client-profile-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <aside
         aria-label="Ficha do cliente"
-        className="client-side-panel"
+        aria-modal="true"
+        className="client-side-panel client-profile-modal"
+        role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="client-side-panel__header">

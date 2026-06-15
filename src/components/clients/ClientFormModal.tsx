@@ -3,6 +3,7 @@ import { isAdmin } from "../AppShell";
 import { maskPhone } from "../../lib/phone";
 import type { ClientFormValues, ClientRecord } from "../../types/client";
 import type { AppUser } from "../../types/user";
+import { AppDatePicker } from "../ui/AppDatePicker";
 
 interface ClientFormModalProps {
   client: ClientRecord | null;
@@ -97,14 +98,14 @@ export function ClientFormModal({ client, isSaving, mode, user, onClose, onSubmi
                 />
               </label>
 
-              <label className="field-label">
-                Data de nascimento
-                <input
-                  onChange={(event) => updateValue("birth_date", event.target.value)}
-                  type="date"
-                  value={values.birth_date}
-                />
-              </label>
+              <AppDatePicker
+                allowClear
+                className="field-label"
+                label="Data de nascimento"
+                maxDate={new Date().toISOString().slice(0, 10)}
+                onChange={(value) => updateValue("birth_date", value)}
+                value={values.birth_date}
+              />
             </div>
           )}
 

@@ -61,8 +61,18 @@ export function ServiceSidePanel({
   const hasConfigurationIssue = service.is_active !== false && service.professionals.length === 0;
 
   return (
-    <div className="client-drawer-backdrop" role="presentation" onMouseDown={onClose}>
-      <aside aria-label="Ficha do serviço" className="client-side-panel service-side-panel" onMouseDown={(event) => event.stopPropagation()}>
+    <div
+      className="client-drawer-backdrop client-profile-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <aside
+        aria-label="Ficha do serviço"
+        aria-modal="true"
+        className="client-side-panel service-side-panel client-profile-modal"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <header className="client-side-panel__header">
           <div>
             <span className={isInactive ? "status-pill client-status-pill" : "status-pill status-pill--active client-status-pill"}>

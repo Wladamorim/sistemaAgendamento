@@ -166,7 +166,7 @@ export function AppShell({ activeRoute, children, isSigningOut, user, onNavigate
         </div>
       </aside>
 
-      <div className="app-content">{children}</div>
+      <div className={activeRoute === "agenda" ? "app-content app-content--agenda" : "app-content"}>{children}</div>
 
       <nav className="mobile-bottom-nav" aria-label="Menu principal mobile">
         {bottomNavigationItems.map((item) => {

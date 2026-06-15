@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { formatCurrency, formatTime, timeToMinutes } from "../../lib/agenda";
+import { getAppointmentStatusLabel } from "../../lib/appointmentStatus";
 import type { Appointment, Professional, ScheduleBlock } from "../../types/agenda";
 import { AppointmentCard } from "./AppointmentCard";
 import { ProfessionalColumn } from "./ProfessionalColumn";
@@ -566,7 +567,12 @@ export function AgendaGrid({
             {formatTime(appointmentPreview.appointment.start_time)} - {formatTime(appointmentPreview.appointment.end_time)}
           </span>
           <span>{formatCurrency(appointmentPreview.appointment.price_at_booking)}</span>
-          <span>{appointmentPreview.appointment.status_name ?? appointmentPreview.appointment.status_code ?? "Sem status"}</span>
+          <span>
+            {getAppointmentStatusLabel(
+              appointmentPreview.appointment.status_code,
+              appointmentPreview.appointment.status_name,
+            )}
+          </span>
           {appointmentPreview.appointment.appointment_notes ? (
             <p>{appointmentPreview.appointment.appointment_notes}</p>
           ) : null}

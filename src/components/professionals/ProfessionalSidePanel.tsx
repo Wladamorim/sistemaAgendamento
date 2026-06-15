@@ -73,10 +73,16 @@ export function ProfessionalSidePanel({
   const isInactive = professional.is_active === false;
 
   return (
-    <div className="client-drawer-backdrop" role="presentation" onMouseDown={onClose}>
+    <div
+      className="client-drawer-backdrop client-profile-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <aside
         aria-label="Ficha do profissional"
-        className="client-side-panel professional-side-panel"
+        aria-modal="true"
+        className="client-side-panel professional-side-panel client-profile-modal"
+        role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="client-side-panel__header">

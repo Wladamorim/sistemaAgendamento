@@ -1,7 +1,8 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { maskPhone } from "../../lib/phone";
 import { supabase } from "../../lib/supabase";
 import type { Client } from "../../types/agenda";
+import { AppDatePicker } from "../ui/AppDatePicker";
 import { SearchInput } from "../ui/SearchInput";
 
 export type ClientMode = "existing" | "new" | null;
@@ -59,7 +60,7 @@ export function ClientStep({
       const safeTerm = normalizedTerm.replace(/[%_]/g, "\\$&");
       const { data, error } = await supabase
         .from("clients")
-        .select("id, full_name, phone, birth_date, notes")
+        .select("id, full_name, phone, birth_date, notes, allergies, preferences, restrictions")
         .or(`full_name.ilike.%${safeTerm}%,phone.ilike.%${safeTerm}%`)
         .order("full_name", { ascending: true })
         .limit(8);
@@ -109,6 +110,18 @@ export function ClientStep({
     }
   }
 
+  const filteredClients = useMemo(() => {
+    const uniqueClients = new Map<string, Client>();
+
+    clients.forEach((client) => {
+      if (client.id && client.id !== selectedClient?.id) {
+        uniqueClients.set(client.id, client);
+      }
+    });
+
+    return [...uniqueClients.values()];
+  }, [clients, selectedClient?.id]);
+
   return (
     <section className="modal-section">
       <h3>Cliente já cadastrado?</h3>
@@ -145,22 +158,36 @@ export function ClientStep({
 
           {selectedClient ? (
             <div className="selected-client">
-              <strong>{selectedClient.full_name}</strong>
-              <span>{selectedClient.phone ?? "Sem telefone"}</span>
+              <div>
+                <span>Cliente selecionado</span>
+                <strong>{selectedClient.full_name}</strong>
+                <small>{selectedClient.phone ?? "Sem telefone"}</small>
+              </div>
+              <button
+                className="ghost-button"
+                onClick={() => {
+                  onSelectClient(null);
+                  setSearchTerm("");
+                  setClients([]);
+                }}
+                type="button"
+              >
+                Trocar cliente
+              </button>
             </div>
           ) : null}
 
           {isSearching ? <p className="muted-text">Buscando clientes...</p> : null}
           {errorMessage ? <p className="inline-error">{errorMessage}</p> : null}
 
-          {clients.length > 0 ? (
+          {filteredClients.length > 0 ? (
             <div className="client-results">
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <button
                   key={client.id}
                   onClick={() => {
                     onSelectClient(client);
-                    setSearchTerm(client.full_name);
+                    setSearchTerm("");
                     setClients([]);
                   }}
                   type="button"
@@ -189,10 +216,14 @@ export function ClientStep({
               <input onChange={updateNewClient("phone")} type="tel" value={newClient.phone} />
             </label>
 
-            <label className="field-label">
-              Data de nascimento
-              <input onChange={updateNewClient("birth_date")} type="date" value={newClient.birth_date} />
-            </label>
+            <AppDatePicker
+              allowClear
+              className="field-label"
+              label="Data de nascimento"
+              maxDate={new Date().toISOString().slice(0, 10)}
+              onChange={(value) => onNewClientChange({ ...newClient, birth_date: value })}
+              value={newClient.birth_date}
+            />
           </div>
 
           <label className="field-label">

@@ -1,4 +1,5 @@
 import { formatCurrency, formatTime, timeToMinutes } from "../../lib/agenda";
+import { getAppointmentStatusClass, getAppointmentStatusLabel } from "../../lib/appointmentStatus";
 import type { Appointment, Professional, ScheduleBlock } from "../../types/agenda";
 
 interface AgendaMobileListProps {
@@ -36,10 +37,6 @@ function startsInSlot(startTime: string, timeSlot: string, intervalMinutes: numb
   return itemStart >= slotStart && itemStart < slotEnd;
 }
 
-function getStatusClass(statusCode: string | null) {
-  return statusCode?.toLowerCase().replace(/[^a-z0-9]+/g, "-") ?? "unknown";
-}
-
 export function AgendaMobileList({
   appointments,
   professionals,
@@ -74,7 +71,7 @@ export function AgendaMobileList({
           if (startingAppointments.length > 0) {
             return startingAppointments.map((appointment) => (
               <button
-                className={`agenda-mobile-card agenda-mobile-card--appointment agenda-mobile-card--${getStatusClass(
+                className={`agenda-mobile-card agenda-mobile-card--appointment agenda-mobile-card--${getAppointmentStatusClass(
                   appointment.status_code,
                 )}`}
                 key={`${timeSlot}-${professional.id}-${appointment.id}`}
@@ -88,7 +85,7 @@ export function AgendaMobileList({
                 <span>{appointment.procedure_name ?? appointment.category_name ?? "Procedimento não informado"}</span>
                 <small>{professional.name}</small>
                 {appointment.client_phone ? <small>{appointment.client_phone}</small> : null}
-                <em>{appointment.status_name ?? appointment.status_code ?? "Sem status"}</em>
+                <em>{getAppointmentStatusLabel(appointment.status_code, appointment.status_name)}</em>
                 <small>{formatCurrency(appointment.price_at_booking)}</small>
               </button>
             ));

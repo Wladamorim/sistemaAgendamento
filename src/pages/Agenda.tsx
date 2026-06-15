@@ -7,6 +7,7 @@ import { AppointmentDetailsModal } from "../components/agenda/AppointmentDetails
 import { ScheduleBlockModal } from "../components/agenda/ScheduleBlockModal";
 import { SearchInput } from "../components/ui/SearchInput";
 import { addDays, formatDateForQuery, formatTime, generateTimeSlots, timeToMinutes } from "../lib/agenda";
+import { getAppointmentStatusLabel } from "../lib/appointmentStatus";
 import { supabase } from "../lib/supabase";
 import type { Appointment, Client, Professional, ScheduleBlock, SelectedAgendaSlot } from "../types/agenda";
 import type { AppUser } from "../types/user";
@@ -87,7 +88,7 @@ export function Agenda({ user }: AgendaProps) {
   const [reloadKey, setReloadKey] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const professionalFilterRef = useRef<HTMLDivElement | null>(null);
-  const timeSlots = useMemo(() => generateTimeSlots("08:00", "20:00", 30), []);
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
   const canManageBlocks = user.role === "Administrador";
 
   useEffect(() => {
@@ -415,6 +416,19 @@ export function Agenda({ user }: AgendaProps) {
     );
   }
 
+  function openCreateAppointmentFromSlot(professional: Professional, startTime: string) {
+    const date = formatDateForQuery(selectedDate);
+
+    console.log("[OpenCreateAppointment] slot recebido:", {
+      date,
+      professionalId: professional.id,
+      professionalName: professional.name,
+      startTime,
+    });
+
+    setSelectedSlot({ professional, startTime });
+  }
+
   return (
     <main className="agenda-page">
       <AgendaToolbar
@@ -601,7 +615,7 @@ export function Agenda({ user }: AgendaProps) {
                         </span>
                         <span>
                           {appointment.client_phone ?? "Telefone não informado"} ·{" "}
-                          {appointment.status_name ?? appointment.status_code ?? "Sem status"}
+                          {getAppointmentStatusLabel(appointment.status_code, appointment.status_name)}
                         </span>
                       </div>
                       <button className="secondary-button" onClick={() => setSelectedAppointment(appointment)} type="button">
@@ -639,7 +653,7 @@ export function Agenda({ user }: AgendaProps) {
           <AgendaMobileList
             appointments={visibleAppointments}
             onAppointmentClick={setSelectedAppointment}
-            onEmptySlotClick={(professional, startTime) => setSelectedSlot({ professional, startTime })}
+            onEmptySlotClick={openCreateAppointmentFromSlot}
             professionals={visibleProfessionals}
             scheduleBlocks={visibleBlocks}
             showFreeSlots={!hasStatusOrSearchFilter}
@@ -650,7 +664,7 @@ export function Agenda({ user }: AgendaProps) {
             currentTime={selectedDateIsToday ? getCurrentTimeLabel(now) : null}
             highlightedAppointmentIds={highlightedAppointmentIds}
             onAppointmentClick={setSelectedAppointment}
-            onEmptySlotClick={(professional, startTime) => setSelectedSlot({ professional, startTime })}
+            onEmptySlotClick={openCreateAppointmentFromSlot}
             professionals={visibleProfessionals}
             scheduleBlocks={visibleBlocks}
             timeSlots={timeSlots}

@@ -4,6 +4,8 @@ import { RestrictedAccess } from "../components/RestrictedAccess";
 import { MetricCard } from "../components/dashboard/MetricCard";
 import { MovementTable } from "../components/dashboard/MovementTable";
 import { RankingList } from "../components/dashboard/RankingList";
+import { SystemEventsPanel } from "../components/movement/SystemEventsPanel";
+import { AppDatePicker } from "../components/ui/AppDatePicker";
 import { SearchInput } from "../components/ui/SearchInput";
 import {
   addDays,
@@ -35,6 +37,7 @@ interface MovimentacaoProps {
 }
 
 type MovementPeriod = "day" | "week" | "month" | "quarter" | "semester" | "year";
+type MovementSection = "financial" | "production" | "events";
 type MovementStatusFilter = "all" | "completed" | "scheduled" | "confirmed" | "cancelled" | "no_show";
 type MovementPaymentFilter =
   | "all"
@@ -755,6 +758,7 @@ function MovementDashboardSkeleton() {
 }
 
 export function Movimentacao({ user }: MovimentacaoProps) {
+  const [activeSection, setActiveSection] = useState<MovementSection>("financial");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedPeriod, setSelectedPeriod] = useState<MovementPeriod>("day");
   const [appointments, setAppointments] = useState<MovementAppointment[]>([]);
@@ -908,174 +912,224 @@ export function Movimentacao({ user }: MovimentacaoProps) {
           <p>Resumo financeiro e operacional por período</p>
         </div>
 
-        <div className="movement-date-controls">
-          <label className="movement-date-input">
-            Periodo
-            <select onChange={(event) => setSelectedPeriod(event.target.value as MovementPeriod)} value={selectedPeriod}>
-              {periodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        {activeSection !== "events" ? (
+          <div className="movement-date-controls">
+            <label className="movement-date-input">
+              Período
+              <select onChange={(event) => setSelectedPeriod(event.target.value as MovementPeriod)} value={selectedPeriod}>
+                {periodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="movement-date-input">
-            Data de referencia
-            <input
-              onChange={(event) => setSelectedDate(parseDateInput(event.target.value))}
-              type="date"
+            <AppDatePicker
+              className="movement-date-input"
+              label="Data de referência"
+              onChange={(value) => setSelectedDate(parseDateInput(value))}
               value={selectedDateValue}
             />
-          </label>
 
-          <button onClick={() => setSelectedDate(new Date())} type="button">
-            {selectedPeriod === "day" ? "Hoje" : "Periodo atual"}
-          </button>
-          <button onClick={() => setSelectedDate((current) => shiftDateByPeriod(current, selectedPeriod, -1))} type="button">
-            {selectedPeriod === "day" ? "Ontem" : "Anterior"}
-          </button>
-          <button onClick={() => setSelectedDate((current) => shiftDateByPeriod(current, selectedPeriod, 1))} type="button">
-            {selectedPeriod === "day" ? "Amanhã" : "Próximo"}
-          </button>
-        </div>
+            <button onClick={() => setSelectedDate(new Date())} type="button">
+              {selectedPeriod === "day" ? "Hoje" : "Período atual"}
+            </button>
+            <button
+              onClick={() => setSelectedDate((current) => shiftDateByPeriod(current, selectedPeriod, -1))}
+              type="button"
+            >
+              {selectedPeriod === "day" ? "Ontem" : "Anterior"}
+            </button>
+            <button
+              onClick={() => setSelectedDate((current) => shiftDateByPeriod(current, selectedPeriod, 1))}
+              type="button"
+            >
+              {selectedPeriod === "day" ? "Amanhã" : "Próximo"}
+            </button>
+          </div>
+        ) : null}
       </header>
 
-      <p className="movement-selected-date">
-        <span>{currentPeriodLabel}</span>
-        {selectedPeriod === "day" && relativeDateLabel ? <strong>{relativeDateLabel}</strong> : null}
-        <small>· Comparando com {previousPeriodRangeLabel}</small>
-      </p>
+      <nav aria-label="Seções da movimentação" className="movement-section-tabs">
+        <button
+          aria-selected={activeSection === "financial"}
+          className={activeSection === "financial" ? "is-active" : ""}
+          onClick={() => setActiveSection("financial")}
+          role="tab"
+          type="button"
+        >
+          Resumo financeiro
+        </button>
+        <button
+          aria-selected={activeSection === "production"}
+          className={activeSection === "production" ? "is-active" : ""}
+          onClick={() => setActiveSection("production")}
+          role="tab"
+          type="button"
+        >
+          Produção
+        </button>
+        <button
+          aria-selected={activeSection === "events"}
+          className={activeSection === "events" ? "is-active" : ""}
+          onClick={() => setActiveSection("events")}
+          role="tab"
+          type="button"
+        >
+          Eventos do período
+        </button>
+      </nav>
 
-      {errorMessage ? <p className="agenda-alert">{errorMessage}</p> : null}
-
-      {isLoading ? (
-        <MovementDashboardSkeleton />
+      {activeSection === "events" ? (
+        <SystemEventsPanel initialEndDate={currentRange.endValue} initialStartDate={currentRange.startValue} />
       ) : (
         <>
-          <section className="metrics-grid movement-metrics-grid">
-            <MetricCard
-              detail={formatComparison(totalPeople, previousTotalPeople, previousLabel, (value) => String(value))}
-              icon="users"
-              label="Pessoas atendidas"
-              tone={getComparisonTone(totalPeople, previousTotalPeople)}
-              value={String(totalPeople)}
-            />
-            <MetricCard
-              detail={formatComparison(totalCash, previousTotalCash, previousLabel, formatCurrency)}
-              icon="revenue"
-              label={revenueLabel}
-              tone={getComparisonTone(totalCash, previousTotalCash)}
-              value={formatCurrency(totalCash)}
-            />
-            <MetricCard
-              detail={formatComparison(averageTicket, previousAverageTicket, previousLabel, formatCurrency)}
-              icon="revenue"
-              label="Ticket medio"
-              tone={getComparisonTone(averageTicket, previousAverageTicket)}
-              value={formatCurrency(averageTicket)}
-            />
-            <MetricCard
-              detail={formatComparison(totalCompleted, previousTotalCompleted, previousLabel, (value) => String(value))}
-              icon="category"
-              label="Atendimentos finalizados"
-              tone={getComparisonTone(totalCompleted, previousTotalCompleted)}
-              value={String(totalCompleted)}
-            />
-          </section>
+          <p className="movement-selected-date">
+            <span>{currentPeriodLabel}</span>
+            {selectedPeriod === "day" && relativeDateLabel ? <strong>{relativeDateLabel}</strong> : null}
+            <small>· Comparando com {previousPeriodRangeLabel}</small>
+          </p>
 
-          <section className="movement-highlight-grid">
-            <MetricCard
-              detail={`${comboUsageCount} atendimento(s) por combo`}
-              icon="revenue"
-              label="Produção do período"
-              value={formatCurrency(totalProduction)}
-            />
-            <MetricCard
-              detail={`${comboSales.length} venda(s) de combo`}
-              icon="revenue"
-              label="Venda de combos"
-              value={formatCurrency(comboSalesTotal)}
-            />
-            <MetricCard
-              detail={busiestCategory ? `${busiestCategory.count} atendimento(s)` : undefined}
-              icon="category"
-              label="Area mais movimentada"
-              value={busiestCategory?.name ?? "Sem dados"}
-            />
-            <MetricCard
-              detail={busiestProfessional ? `${busiestProfessional.count} atendimento(s)` : undefined}
-              icon="professional"
-              label="Profissional destaque"
-              value={busiestProfessional?.name ?? "Sem dados"}
-            />
-          </section>
+          {errorMessage ? <p className="agenda-alert">{errorMessage}</p> : null}
 
-          <section className="movement-finance-grid">
-            <PaymentBreakdown items={paymentBreakdown} total={totalCash} />
-            <RevenueChart items={chartData} />
-          </section>
+          {isLoading ? (
+            <MovementDashboardSkeleton />
+          ) : activeSection === "financial" ? (
+            <>
+              <section className="metrics-grid movement-metrics-grid">
+                <MetricCard
+                  detail={formatComparison(totalPeople, previousTotalPeople, previousLabel, (value) => String(value))}
+                  icon="users"
+                  label="Pessoas atendidas"
+                  tone={getComparisonTone(totalPeople, previousTotalPeople)}
+                  value={String(totalPeople)}
+                />
+                <MetricCard
+                  detail={formatComparison(totalCash, previousTotalCash, previousLabel, formatCurrency)}
+                  icon="revenue"
+                  label={revenueLabel}
+                  tone={getComparisonTone(totalCash, previousTotalCash)}
+                  value={formatCurrency(totalCash)}
+                />
+                <MetricCard
+                  detail={formatComparison(averageTicket, previousAverageTicket, previousLabel, formatCurrency)}
+                  icon="revenue"
+                  label="Ticket médio"
+                  tone={getComparisonTone(averageTicket, previousAverageTicket)}
+                  value={formatCurrency(averageTicket)}
+                />
+                <MetricCard
+                  detail={formatComparison(totalCompleted, previousTotalCompleted, previousLabel, (value) => String(value))}
+                  icon="category"
+                  label="Atendimentos finalizados"
+                  tone={getComparisonTone(totalCompleted, previousTotalCompleted)}
+                  value={String(totalCompleted)}
+                />
+              </section>
 
-          <section className="dashboard-grid">
-            <RankingList items={professionalRanking} title="Ranking por rendimento - profissionais" />
-            <RankingList items={categoryRanking} title="Ranking por rendimento - categorias" />
-          </section>
+              <section className="movement-finance-grid">
+                <PaymentBreakdown items={paymentBreakdown} total={totalCash} />
+                <RevenueChart items={chartData} />
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="movement-highlight-grid">
+                <MetricCard
+                  detail={`${comboUsageCount} atendimento(s) por combo`}
+                  icon="revenue"
+                  label="Produção do período"
+                  value={formatCurrency(totalProduction)}
+                />
+                <MetricCard
+                  detail={`${comboSales.length} venda(s) de combo`}
+                  icon="revenue"
+                  label="Venda de combos"
+                  value={formatCurrency(comboSalesTotal)}
+                />
+                <MetricCard
+                  detail={busiestCategory ? `${busiestCategory.count} atendimento(s)` : undefined}
+                  icon="category"
+                  label="Área mais movimentada"
+                  value={busiestCategory?.name ?? "Sem dados"}
+                />
+                <MetricCard
+                  detail={busiestProfessional ? `${busiestProfessional.count} atendimento(s)` : undefined}
+                  icon="professional"
+                  label="Profissional destaque"
+                  value={busiestProfessional?.name ?? "Sem dados"}
+                />
+              </section>
 
-          <section className="movement-filters-panel">
-            <SearchInput
-              className="client-search movement-search"
-              onChange={setSearchTerm}
-              placeholder="Buscar cliente, serviço ou profissional"
-              value={searchTerm}
-            />
-            <label className="movement-date-input">
-              Status
-              <select onChange={(event) => setStatusFilter(event.target.value as MovementStatusFilter)} value={statusFilter}>
-                {statusFilterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="movement-date-input">
-              Pagamento
-              <select onChange={(event) => setPaymentFilter(event.target.value as MovementPaymentFilter)} value={paymentFilter}>
-                {paymentFilterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="movement-date-input">
-              Profissional
-              <select onChange={(event) => setProfessionalFilter(event.target.value)} value={professionalFilter}>
-                <option value="all">Todos profissionais</option>
-                {professionalOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="movement-date-input">
-              Categoria
-              <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
-                <option value="all">Todas categorias</option>
-                {categoryOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="secondary-button" onClick={() => downloadCsv(filteredAppointments)} type="button">
-              Exportar CSV
-            </button>
-          </section>
+              <section className="dashboard-grid">
+                <RankingList items={professionalRanking} title="Ranking por rendimento - profissionais" />
+                <RankingList items={categoryRanking} title="Ranking por rendimento - categorias" />
+              </section>
 
-          <MovementTable appointments={filteredAppointments} title="Atendimentos do período" />
+              <section className="movement-filters-panel">
+                <SearchInput
+                  className="client-search movement-search"
+                  onChange={setSearchTerm}
+                  placeholder="Buscar cliente, serviço ou profissional"
+                  value={searchTerm}
+                />
+                <label className="movement-date-input">
+                  Status
+                  <select
+                    onChange={(event) => setStatusFilter(event.target.value as MovementStatusFilter)}
+                    value={statusFilter}
+                  >
+                    {statusFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="movement-date-input">
+                  Pagamento
+                  <select
+                    onChange={(event) => setPaymentFilter(event.target.value as MovementPaymentFilter)}
+                    value={paymentFilter}
+                  >
+                    {paymentFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="movement-date-input">
+                  Profissional
+                  <select onChange={(event) => setProfessionalFilter(event.target.value)} value={professionalFilter}>
+                    <option value="all">Todos profissionais</option>
+                    {professionalOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="movement-date-input">
+                  Categoria
+                  <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                    <option value="all">Todas categorias</option>
+                    {categoryOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="secondary-button" onClick={() => downloadCsv(filteredAppointments)} type="button">
+                  Exportar CSV
+                </button>
+              </section>
+
+              <MovementTable appointments={filteredAppointments} title="Atendimentos do período" />
+            </>
+          )}
         </>
       )}
     </main>

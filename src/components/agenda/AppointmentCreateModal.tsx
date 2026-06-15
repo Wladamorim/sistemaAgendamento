@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { addMinutesToTime, formatDate, formatDateForQuery, formatTime, timeToMinutes } from "../../lib/agenda";
+import {
+  DEFAULT_WORKING_HOURS,
+  addMinutesToTime,
+  formatDate,
+  formatDateForQuery,
+  formatTime,
+  isTimeRangeWithinWorkingHours,
+  timeToMinutes,
+} from "../../lib/agenda";
 import { supabase } from "../../lib/supabase";
-import type { AppointmentItem, Client, Procedure, ScheduleBlock, SelectedAgendaSlot } from "../../types/agenda";
+import type { Client, Procedure, ScheduleBlock, SelectedAgendaSlot } from "../../types/agenda";
 import { ClientStep, emptyNewClientDraft, type ClientMode, type NewClientDraft } from "./ClientStep";
 import { ProcedureSelect } from "./ProcedureSelect";
 
@@ -27,27 +35,83 @@ interface SelectedServiceItem {
   price_at_booking: number | string;
 }
 
-function getInsertErrorMessage(errorMessage: string) {
-  const normalized = errorMessage.toLowerCase();
+interface AppointmentConflict {
+  id: string;
+  client_id: string | null;
+  professional_id: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  status_code: string | null;
+}
 
-  if (
-    normalized.includes("conflict") ||
-    normalized.includes("duplicate") ||
-    normalized.includes("exclusion") ||
-    normalized.includes("ocupado")
-  ) {
-    return "Esse horário já está ocupado para este profissional.";
+interface AppointmentItemInsertPayload {
+  appointment_id: string;
+  procedure_id: string;
+  professional_id: string;
+  duration_minutes: number;
+  price_at_booking: number;
+  payment_method: string | null;
+  payment_installments: number | null;
+  payment_details: unknown | null;
+  paid_amount: number | null;
+  combo_usage_id: string | null;
+}
+
+function formatSupabaseError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return "Erro desconhecido.";
   }
 
-  return "Erro ao criar agendamento.";
+  const supabaseError = error as {
+    code?: string | null;
+    details?: string | null;
+    hint?: string | null;
+    message?: string | null;
+  };
+
+  return [
+    supabaseError.message,
+    supabaseError.details,
+    supabaseError.hint,
+    supabaseError.code ? `Código: ${supabaseError.code}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+}
+
+function isTimeConflictError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const supabaseError = error as { code?: string | null; message?: string | null };
+  const message = supabaseError.message?.toLowerCase() ?? "";
+
+  return (
+    supabaseError.code === "23P01" ||
+    message.includes("appointments_no_time_overlap") ||
+    message.includes("exclusion constraint") ||
+    message.includes("conflicting key value")
+  );
+}
+
+function getAppointmentConflictMessage(conflict?: AppointmentConflict | null) {
+  if (!conflict?.start_time || !conflict.end_time) {
+    return "Esse horário já está ocupado para este profissional. Escolha outro horário.";
+  }
+
+  return `Esse horário já está ocupado para este profissional. Já existe um agendamento entre ${formatTime(
+    conflict.start_time,
+  )} e ${formatTime(conflict.end_time)}.`;
 }
 
 function getJoinedProcedure(row: ProcedureProfessionalRow) {
   return Array.isArray(row.procedures) ? row.procedures[0] : row.procedures;
 }
 
-function doesBlockOverlap(block: ScheduleBlock, professionalId: string, startTime: string, endTime: string) {
-  if (block.professional_id && block.professional_id !== professionalId) {
+function doesBlockOverlap(block: ScheduleBlock, targetProfessionalId: string, startTime: string, endTime: string) {
+  if (block.professional_id && block.professional_id !== targetProfessionalId) {
     return false;
   }
 
@@ -73,6 +137,33 @@ export function AppointmentCreateModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedServices, setSelectedServices] = useState<SelectedServiceItem[]>([]);
+  const displayDate = selectedDate;
+  const effectiveDate = formatDateForQuery(selectedDate);
+  const effectiveProfessionalId = slot.professional.id;
+  const effectiveStartTime = slot.startTime;
+  const hasValidDate = /^\d{4}-\d{2}-\d{2}$/.test(effectiveDate);
+
+  const validSelectedServices = useMemo(
+    () =>
+      selectedServices.filter(
+        (service) =>
+          Boolean(service.procedure?.id) &&
+          Boolean(service.professional_id || effectiveProfessionalId) &&
+          Number(service.duration_minutes) > 0,
+      ),
+    [effectiveProfessionalId, selectedServices],
+  );
+
+  const totalDuration = useMemo(
+    () => validSelectedServices.reduce((sum, service) => sum + Number(service.duration_minutes), 0),
+    [validSelectedServices],
+  );
+  const calculatedEndTime = effectiveStartTime && totalDuration > 0 ? addMinutesToTime(effectiveStartTime, totalDuration) : "";
+  const effectiveEndTime = calculatedEndTime;
+  const endTime = effectiveEndTime;
+  const exceedsWorkingHours = Boolean(
+    effectiveStartTime && effectiveEndTime && !isTimeRangeWithinWorkingHours(effectiveStartTime, effectiveEndTime),
+  );
 
   useEffect(() => {
     if (!initialClient) {
@@ -83,39 +174,31 @@ export function AppointmentCreateModal({
     setSelectedClient(initialClient);
   }, [initialClient]);
 
-  const endTime = useMemo(() => {
-    const totalMinutes = selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0);
-    
-    if (!totalMinutes || totalMinutes === 0) {
-      return "";
-    }
-
-    return addMinutesToTime(slot.startTime, totalMinutes);
-  }, [selectedServices, slot.startTime]);
-
-  function addServiceToList() {
-    if (!selectedProcedure) {
+  function addServiceToList(procedure = selectedProcedure) {
+    if (!procedure) {
       setErrorMessage("Selecione um serviço.");
       return;
     }
 
-    const isAlreadyAdded = selectedServices.some((service) => service.procedure.id === selectedProcedure.id);
+    const isAlreadyAdded = selectedServices.some((service) => service.procedure.id === procedure.id);
     if (isAlreadyAdded) {
       setErrorMessage("Este serviço já foi adicionado.");
+      setSelectedProcedure(null);
       return;
     }
 
-    if (!selectedProcedure.duration_minutes) {
+    if (!procedure.duration_minutes) {
       setErrorMessage("O serviço selecionado não possui duração cadastrada.");
+      setSelectedProcedure(null);
       return;
     }
 
     const newService: SelectedServiceItem = {
       id: `${Date.now()}-${Math.random()}`,
-      procedure: selectedProcedure,
-      professional_id: slot.professional.id,
-      duration_minutes: selectedProcedure.duration_minutes,
-      price_at_booking: selectedProcedure.price ?? 0,
+      procedure,
+      professional_id: effectiveProfessionalId,
+      duration_minutes: procedure.duration_minutes,
+      price_at_booking: procedure.price ?? 0,
     };
 
     setSelectedServices([...selectedServices, newService]);
@@ -123,20 +206,68 @@ export function AppointmentCreateModal({
     setErrorMessage(null);
   }
 
+  function handleSelectProcedure(procedure: Procedure) {
+    setSelectedProcedure(procedure);
+    addServiceToList(procedure);
+  }
+
   function removeServiceFromList(serviceId: string) {
     setSelectedServices((services) => services.filter((service) => service.id !== serviceId));
     setErrorMessage(null);
   }
 
-  const totalDuration = useMemo(
-    () => selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0),
-    [selectedServices],
-  );
-
   const totalPrice = useMemo(
-    () => selectedServices.reduce((sum, service) => sum + Number(service.price_at_booking), 0),
-    [selectedServices],
+    () => validSelectedServices.reduce((sum, service) => sum + Number(service.price_at_booking), 0),
+    [validSelectedServices],
   );
+  const isNewClientValid = clientMode === "new" && Boolean(newClient.full_name.trim() && newClient.phone.trim());
+
+  const missingRequiredFields = useMemo(() => {
+    const missingFields: string[] = [];
+
+    if (!selectedClient && !isNewClientValid) {
+      missingFields.push("cliente");
+    }
+
+    if (selectedServices.length === 0) {
+      missingFields.push("serviço");
+    }
+
+    if (selectedServices.length > 0 && validSelectedServices.length !== selectedServices.length) {
+      missingFields.push("serviço válido");
+    }
+
+    if (!effectiveProfessionalId) {
+      missingFields.push("profissional");
+    }
+
+    if (!hasValidDate) {
+      missingFields.push("data");
+    }
+
+    if (!effectiveStartTime) {
+      missingFields.push("horário");
+    }
+
+    return [...new Set(missingFields)];
+  }, [
+    effectiveProfessionalId,
+    effectiveStartTime,
+    hasValidDate,
+    isNewClientValid,
+    selectedClient,
+    selectedServices.length,
+    validSelectedServices.length,
+  ]);
+
+  const disabledReason = isLoadingProcedures
+    ? "Carregando serviços do profissional."
+    : exceedsWorkingHours
+      ? `O atendimento terminaria às ${formatTime(effectiveEndTime)}, após o fechamento às ${DEFAULT_WORKING_HOURS.end}.`
+      : missingRequiredFields.length
+        ? `Falta selecionar: ${missingRequiredFields.join(", ")}.`
+        : "";
+  const createButtonDisabled = isSaving || isLoadingProcedures || exceedsWorkingHours || missingRequiredFields.length > 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -224,33 +355,79 @@ export function AppointmentCreateModal({
   }
 
   async function handleCreateAppointment() {
-    if (selectedServices.length === 0) {
-      setErrorMessage("Adicione pelo menos um serviço ao agendamento.");
+    console.log("[CreateAppointment] selectedClient:", selectedClient);
+    console.log("[CreateAppointment] selectedClientId:", selectedClient?.id ?? null);
+    console.log("[CreateAppointment] selectedServices:", selectedServices);
+    console.log("[CreateAppointment] effectiveDate:", effectiveDate);
+    console.log("[CreateAppointment] effectiveProfessionalId:", effectiveProfessionalId);
+    console.log("[CreateAppointment] effectiveStartTime:", effectiveStartTime);
+    console.log("[CreateAppointment] effectiveEndTime:", effectiveEndTime);
+    console.log("[CreateAppointment] missingFields:", missingRequiredFields);
+
+    if (missingRequiredFields.length > 0) {
+      setErrorMessage(`Falta selecionar: ${missingRequiredFields.join(", ")}.`);
       return;
     }
 
-    if (clientMode === "existing" && !selectedClient) {
-      setErrorMessage("Selecione um cliente.");
+    if (!endTime) {
+      setErrorMessage("Não foi possível criar: horário final inválido.");
       return;
     }
 
-    if (clientMode === "new" && (!newClient.full_name.trim() || !newClient.phone.trim())) {
-      setErrorMessage("Preencha nome e telefone do cliente.");
+    if (exceedsWorkingHours) {
+      setErrorMessage(
+        `O atendimento terminaria às ${formatTime(endTime)}, após o fechamento às ${DEFAULT_WORKING_HOURS.end}.`,
+      );
       return;
     }
 
-    if (!clientMode) {
-      setErrorMessage("Informe se o cliente já é cadastrado.");
-      return;
-    }
-
-    if (scheduleBlocks.some((block) => doesBlockOverlap(block, slot.professional.id, slot.startTime, endTime))) {
+    if (scheduleBlocks.some((block) => doesBlockOverlap(block, effectiveProfessionalId, effectiveStartTime, endTime))) {
       setErrorMessage("Este horário está bloqueado para agendamentos.");
       return;
     }
 
     setIsSaving(true);
     setErrorMessage(null);
+
+    const { data: conflicts, error: conflictError } = await supabase
+      .from("appointments")
+      .select("id, client_id, professional_id, scheduled_date, start_time, end_time, status_code")
+      .eq("professional_id", effectiveProfessionalId)
+      .eq("scheduled_date", effectiveDate)
+      .lt("start_time", effectiveEndTime)
+      .gt("end_time", effectiveStartTime)
+      .neq("status_code", "cancelled");
+
+    console.log("[ConflictCheck] effectiveProfessionalId:", effectiveProfessionalId);
+    console.log("[ConflictCheck] effectiveDate:", effectiveDate);
+    console.log("[ConflictCheck] effectiveStartTime:", effectiveStartTime);
+    console.log("[ConflictCheck] effectiveEndTime:", effectiveEndTime);
+    console.log("[ConflictCheck] conflicts:", conflicts);
+    console.log("[ConflictCheck] conflictError:", conflictError);
+
+    if (conflictError) {
+      console.error("[CreateAppointment] erro ao verificar disponibilidade:", conflictError);
+      setErrorMessage(`Erro ao verificar disponibilidade: ${formatSupabaseError(conflictError)}`);
+      setIsSaving(false);
+      return;
+    }
+
+    const realConflicts = ((conflicts ?? []) as AppointmentConflict[]).filter(
+      (item) =>
+        item.professional_id === effectiveProfessionalId &&
+        item.scheduled_date === effectiveDate &&
+        formatTime(item.start_time) < formatTime(effectiveEndTime) &&
+        formatTime(item.end_time) > formatTime(effectiveStartTime) &&
+        item.status_code !== "cancelled",
+    );
+
+    if (realConflicts.length > 0) {
+      const conflict = realConflicts[0];
+      console.log("[CreateAppointment] conflito de horário encontrado antes do insert:", conflict);
+      setErrorMessage(getAppointmentConflictMessage(conflict));
+      setIsSaving(false);
+      return;
+    }
 
     let clientForAppointment = selectedClient;
 
@@ -271,56 +448,112 @@ export function AppointmentCreateModal({
       return;
     }
 
-    // Get first service for main appointment fields (for backwards compatibility)
-    const firstService = selectedServices[0];
+    const firstService = validSelectedServices[0];
 
-    // Create appointment
+    if (!firstService?.procedure?.id) {
+      setErrorMessage("Não foi possível criar: serviço selecionado sem ID.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!clientForAppointment.id) {
+      setErrorMessage("Não foi possível criar: cliente sem ID.");
+      setIsSaving(false);
+      return;
+    }
+
+    const invalidService = validSelectedServices.find((service) => !service.procedure?.id);
+
+    if (invalidService) {
+      console.error("[CreateAppointment] serviço selecionado inválido:", invalidService);
+      setErrorMessage("Não foi possível criar: serviço selecionado sem ID.");
+      setIsSaving(false);
+      return;
+    }
+
+    const appointmentPayload = {
+      client_id: clientForAppointment.id,
+      procedure_id: firstService.procedure.id,
+      professional_id: effectiveProfessionalId,
+      scheduled_date: effectiveDate,
+      start_time: effectiveStartTime,
+      end_time: endTime,
+      price_at_booking: firstService.price_at_booking,
+      duration_at_booking: totalDuration,
+      status_code: "scheduled",
+      notes: notes.trim() || null,
+    };
+
+    const appointmentItemsDraftPayload = validSelectedServices.map((service) => ({
+      procedure_id: service.procedure.id,
+      professional_id: service.professional_id || effectiveProfessionalId,
+      duration_minutes: Number(service.duration_minutes),
+      price_at_booking: Number(service.price_at_booking ?? 0),
+    }));
+
+    console.log("[CreateAppointment] appointmentPayload:", appointmentPayload);
+    console.log("[CreateAppointment] appointmentItemsDraftPayload:", appointmentItemsDraftPayload);
+
     const { data: appointmentData, error: appointmentError } = await supabase
       .from("appointments")
-      .insert({
-        client_id: clientForAppointment.id,
-        procedure_id: firstService.procedure.id,
-        professional_id: slot.professional.id,
-        scheduled_date: formatDateForQuery(selectedDate),
-        start_time: slot.startTime,
-        end_time: endTime,
-        price_at_booking: firstService.price_at_booking,
-        duration_at_booking: totalDuration,
-        status_code: "scheduled",
-        notes: notes.trim() || null,
-      })
+      .insert(appointmentPayload)
       .select("id")
       .single();
 
     if (appointmentError) {
-      console.error("CREATE APPOINTMENT ERROR:", appointmentError);
-      setErrorMessage(getInsertErrorMessage(appointmentError.message));
+      if (isTimeConflictError(appointmentError)) {
+        console.error("[CreateAppointment] conflito de horário:", appointmentError);
+        setErrorMessage("Esse horário já está ocupado para este profissional. Escolha outro horário.");
+        setIsSaving(false);
+        return;
+      }
+
+      console.error("[CreateAppointment] erro ao criar appointment:", appointmentError);
+      setErrorMessage(`Erro ao criar agendamento: ${formatSupabaseError(appointmentError)}`);
       setIsSaving(false);
       return;
     }
 
     if (!appointmentData) {
-      setErrorMessage("Erro ao criar agendamento.");
+      setErrorMessage("Erro ao criar agendamento: Supabase não retornou o ID do agendamento.");
       setIsSaving(false);
       return;
     }
 
     const appointmentId = appointmentData.id;
 
-    // Create appointment items for all services
-    const appointmentItems = selectedServices.map((service) => ({
+    const appointmentItemsPayload: AppointmentItemInsertPayload[] = appointmentItemsDraftPayload.map((item) => ({
       appointment_id: appointmentId,
-      procedure_id: service.procedure.id,
-      professional_id: service.professional_id,
-      duration_minutes: service.duration_minutes,
-      price_at_booking: service.price_at_booking,
+      procedure_id: item.procedure_id,
+      professional_id: item.professional_id,
+      duration_minutes: item.duration_minutes,
+      price_at_booking: item.price_at_booking,
+      payment_method: null,
+      payment_installments: null,
+      payment_details: null,
+      paid_amount: null,
+      combo_usage_id: null,
     }));
 
-    const { error: itemsError } = await supabase.from("appointment_items").insert(appointmentItems);
+    console.log("[CreateAppointment] appointmentItemsPayload:", appointmentItemsPayload);
+
+    const { error: itemsError } = await supabase.from("appointment_items").insert(appointmentItemsPayload);
 
     if (itemsError) {
-      console.error("CREATE APPOINTMENT ITEMS ERROR:", itemsError);
-      setErrorMessage("Erro ao criar itens do agendamento.");
+      console.error("[CreateAppointment] erro ao criar appointment_items:", itemsError);
+      console.log("[CreateAppointment] rollback appointment_id:", appointmentId);
+
+      const { error: rollbackError } = await supabase.from("appointments").delete().eq("id", appointmentId);
+
+      if (rollbackError) {
+        console.error("[CreateAppointment] erro ao desfazer appointment:", rollbackError);
+        setErrorMessage(
+          `Erro ao criar itens do agendamento: ${formatSupabaseError(itemsError)} | Rollback falhou: ${formatSupabaseError(rollbackError)}`,
+        );
+      } else {
+        setErrorMessage(`Erro ao criar itens do agendamento: ${formatSupabaseError(itemsError)}`);
+      }
+
       setIsSaving(false);
       return;
     }
@@ -341,7 +574,7 @@ export function AppointmentCreateModal({
           <div>
             <h2 id="create-appointment-title">Criar agendamento</h2>
             <p>
-              {formatDate(selectedDate)} · {formatTime(slot.startTime)}
+              {formatDate(displayDate)} · {formatTime(effectiveStartTime)}
               {endTime ? ` - ${formatTime(endTime)}` : ""}
             </p>
           </div>
@@ -357,6 +590,12 @@ export function AppointmentCreateModal({
             <span>Profissional selecionado</span>
             <strong>{slot.professional.name}</strong>
             <p>{slot.professional.work_description ?? slot.professional.work_type ?? "Descrição não informada"}</p>
+            <div className="appointment-slot-summary">
+              <span>Data e horário</span>
+              <strong>{formatDate(displayDate)}</strong>
+              <small>Início: {formatTime(effectiveStartTime)}</small>
+              <small>Fim estimado: {effectiveEndTime ? formatTime(effectiveEndTime) : "Selecione um serviço"}</small>
+            </div>
           </section>
 
           <div className="modal-section">
@@ -365,7 +604,7 @@ export function AppointmentCreateModal({
               emptyMessage="Este profissional não possui serviços vinculados."
               errorMessage={procedureLinkMessage?.startsWith("Erro") ? procedureLinkMessage : null}
               isLoading={isLoadingProcedures}
-              onSelect={setSelectedProcedure}
+              onSelect={handleSelectProcedure}
               procedures={availableProcedures}
               selectedProcedure={selectedProcedure}
             />
@@ -373,16 +612,6 @@ export function AppointmentCreateModal({
               <p className="muted-text">{procedureLinkMessage}</p>
             ) : null}
 
-            {selectedProcedure && (
-              <button
-                className="secondary-button"
-                onClick={addServiceToList}
-                style={{ marginTop: "8px" }}
-                type="button"
-              >
-                + Adicionar serviço
-              </button>
-            )}
           </div>
 
           {selectedServices.length > 0 && (
@@ -423,7 +652,7 @@ export function AppointmentCreateModal({
                 <div className="summary-row">
                   <span>Horário:</span>
                   <strong>
-                    {formatTime(slot.startTime)} - {formatTime(endTime)}
+                    {formatTime(effectiveStartTime)} - {formatTime(endTime)}
                   </strong>
                 </div>
               </div>
@@ -449,12 +678,17 @@ export function AppointmentCreateModal({
         </div>
 
         <div className="appointment-modal__footer">
+          {createButtonDisabled && disabledReason ? (
+            <p className="appointment-required-hint" aria-live="polite">
+              {disabledReason}
+            </p>
+          ) : null}
           <button className="cancel-button" onClick={onClose} type="button">
             Cancelar
           </button>
           <button
             className="save-button"
-            disabled={isSaving || isLoadingProcedures || selectedServices.length === 0}
+            disabled={createButtonDisabled}
             onClick={handleCreateAppointment}
             type="button"
           >

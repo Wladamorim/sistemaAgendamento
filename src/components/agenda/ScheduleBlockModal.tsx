@@ -1,11 +1,42 @@
 import { useMemo, useState } from "react";
-import { addDays, addMinutesToTime, formatDateForQuery, generateTimeSlots, timeToMinutes } from "../../lib/agenda";
+import {
+  DEFAULT_WORKING_HOURS,
+  addDays,
+  addMinutesToTime,
+  formatDateForQuery,
+  formatTime,
+  generateTimeSlots,
+  isTimeRangeWithinWorkingHours,
+  timeToMinutes,
+} from "../../lib/agenda";
+import { getAppointmentStatusLabel as getAppointmentStatusDisplayLabel } from "../../lib/appointmentStatus";
 import { supabase } from "../../lib/supabase";
-import type { Professional } from "../../types/agenda";
+import type { Appointment, Professional } from "../../types/agenda";
 import type { AppUser } from "../../types/user";
+import { AppDatePicker } from "../ui/AppDatePicker";
 
 type ScheduleBlockMode = "time" | "professional";
 type ScheduleBlockScope = "all" | "professional";
+type ImpactedAppointment = Pick<
+  Appointment,
+  | "id"
+  | "scheduled_date"
+  | "start_time"
+  | "end_time"
+  | "client_name"
+  | "client_phone"
+  | "procedure_name"
+  | "category_name"
+  | "professional_id"
+  | "professional_name"
+  | "status_code"
+  | "status_name"
+>;
+
+interface PendingBlockRequest {
+  dates: string[];
+  professionalIds: string[];
+}
 
 interface ScheduleBlockModalProps {
   currentUser: AppUser;
@@ -34,6 +65,38 @@ function getDateRange(startDate: string, endDate: string) {
   return dates;
 }
 
+function formatDateLabel(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR").format(new Date(year, month - 1, day));
+}
+
+function normalizePhoneForWhatsApp(phone: string | null) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  if (digits.startsWith("55")) {
+    return digits;
+  }
+
+  return `55${digits}`;
+}
+
+function getAppointmentServiceLabel(appointment: ImpactedAppointment) {
+  return appointment.procedure_name ?? appointment.category_name ?? "Serviço não informado";
+}
+
+function getAppointmentStatusLabel(appointment: ImpactedAppointment) {
+  return getAppointmentStatusDisplayLabel(appointment.status_code, appointment.status_name);
+}
+
 export function ScheduleBlockModal({
   currentUser,
   initialDate,
@@ -45,8 +108,9 @@ export function ScheduleBlockModal({
   onCreated,
 }: ScheduleBlockModalProps) {
   const selectedDate = formatDateForQuery(initialDate);
-  const timeSlots = useMemo(() => generateTimeSlots("08:00", "20:00", 30), []);
-  const defaultStartTime = initialStartTime ?? "08:00";
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+  const endTimeOptions = useMemo(() => [...timeSlots, DEFAULT_WORKING_HOURS.end], [timeSlots]);
+  const defaultStartTime = initialStartTime ?? DEFAULT_WORKING_HOURS.start;
   const [scope, setScope] = useState<ScheduleBlockScope>(mode === "time" ? "all" : "professional");
   const [professionalId, setProfessionalId] = useState(initialProfessional?.id ?? professionals[0]?.id ?? "");
   const [blockDate, setBlockDate] = useState(selectedDate);
@@ -57,11 +121,44 @@ export function ScheduleBlockModal({
   const [reason, setReason] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [impactedAppointments, setImpactedAppointments] = useState<ImpactedAppointment[]>([]);
+  const [pendingBlockRequest, setPendingBlockRequest] = useState<PendingBlockRequest | null>(null);
 
-  async function warnIfConflicts(professionalIds: string[], dates: string[]) {
-    let query = supabase
+  function getProfessionalLabel(appointment: ImpactedAppointment) {
+    return (
+      appointment.professional_name ??
+      professionals.find((professional) => professional.id === appointment.professional_id)?.name ??
+      "Profissional não informado"
+    );
+  }
+
+  function openWhatsAppNotice(appointment: ImpactedAppointment) {
+    const phone = normalizePhoneForWhatsApp(appointment.client_phone);
+
+    if (!phone) {
+      return;
+    }
+
+    const professionalName = getProfessionalLabel(appointment);
+    const message = `Olá, ${appointment.client_name ?? "cliente"}! Tudo bem?
+
+Precisamos avisar que o profissional ${professionalName} ficará indisponível no dia ${formatDateLabel(appointment.scheduled_date)} no horário do seu agendamento.
+
+Seu agendamento:
+Serviço: ${getAppointmentServiceLabel(appointment)}
+Horário: ${formatTime(appointment.start_time)}
+
+Podemos remarcar para outro horário?`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function loadImpactedAppointments(professionalIds: string[], dates: string[]) {
+    const { data, error } = await supabase
       .from("v_appointments_full")
-      .select("id")
+      .select(
+        "id, scheduled_date, start_time, end_time, client_name, client_phone, procedure_name, category_name, professional_id, professional_name, status_code, status_name",
+      )
       .in("professional_id", professionalIds)
       .in("scheduled_date", dates)
       .lt("start_time", endTime)
@@ -69,25 +166,56 @@ export function ScheduleBlockModal({
       .not("status_code", "eq", "cancelled")
       .not("status_code", "eq", "no_show")
       .not("status_code", "eq", "rescheduled")
-      .limit(1);
-
-    const { data, error } = await query;
+      .order("scheduled_date", { ascending: true })
+      .order("start_time", { ascending: true });
 
     if (error) {
       console.error("CHECK BLOCK CONFLICTS ERROR:", error);
       throw error;
     }
 
-    if ((data ?? []).length > 0) {
-      return window.confirm("Existem agendamentos nesse período. Revise antes de bloquear.");
+    const uniqueAppointments = new Map<string, ImpactedAppointment>();
+
+    ((data ?? []) as ImpactedAppointment[]).forEach((appointment) => {
+      uniqueAppointments.set(appointment.id, appointment);
+    });
+
+    return [...uniqueAppointments.values()];
+  }
+
+  async function createPendingScheduleBlocks(blockRequest: PendingBlockRequest) {
+    const records = blockRequest.dates.flatMap((date) =>
+      blockRequest.professionalIds.map((id) => ({
+        block_date: date,
+        created_by: currentUser.id,
+        end_time: endTime,
+        professional_id: id,
+        reason: reason.trim() || null,
+        start_time: startTime,
+      })),
+    );
+
+    const { error } = await supabase.from("schedule_blocks").insert(records);
+
+    if (error) {
+      console.error("CREATE SCHEDULE BLOCK ERROR:", error);
+      throw error;
     }
 
-    return true;
+    onCreated(mode === "professional" ? "Profissional bloqueado com sucesso." : "Horário bloqueado com sucesso.");
+    onClose();
   }
 
   async function handleCreateBlock() {
     if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
       setErrorMessage("O horário final precisa ser maior que o horário inicial.");
+      return;
+    }
+
+    if (!isTimeRangeWithinWorkingHours(startTime, endTime)) {
+      setErrorMessage(
+        `O bloqueio deve ficar entre ${DEFAULT_WORKING_HOURS.start} e ${DEFAULT_WORKING_HOURS.end}.`,
+      );
       return;
     }
 
@@ -112,9 +240,11 @@ export function ScheduleBlockModal({
     setErrorMessage(null);
 
     try {
-      const canContinue = await warnIfConflicts(professionalIds, dates);
+      const impacted = await loadImpactedAppointments(professionalIds, dates);
 
-      if (!canContinue) {
+      if (impacted.length > 0) {
+        setImpactedAppointments(impacted);
+        setPendingBlockRequest({ dates, professionalIds });
         setIsSaving(false);
         return;
       }
@@ -147,9 +277,112 @@ export function ScheduleBlockModal({
     }
   }
 
+  async function handleContinueBlock() {
+    if (!pendingBlockRequest) {
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      await createPendingScheduleBlocks(pendingBlockRequest);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Erro ao bloquear horário.");
+      setIsSaving(false);
+    }
+  }
+
+  if (pendingBlockRequest && impactedAppointments.length > 0) {
+    return (
+      <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+        <section
+          aria-labelledby="impacted-appointments-title"
+          className="appointment-modal appointment-modal--wide appointment-modal--impacted"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="appointment-modal__header">
+            <div>
+              <h2 id="impacted-appointments-title">Clientes impactados</h2>
+              <p>Existem clientes agendados nesse período. Avise os clientes antes de confirmar o bloqueio.</p>
+            </div>
+            <button aria-label="Cancelar bloqueio" className="icon-button" onClick={onClose} type="button">
+              x
+            </button>
+          </div>
+
+          {errorMessage ? <p className="inline-error">{errorMessage}</p> : null}
+
+          <div className="appointment-modal__body impacted-appointments">
+            <div className="impacted-appointments__list">
+              {impactedAppointments.map((appointment) => {
+                const whatsappPhone = normalizePhoneForWhatsApp(appointment.client_phone);
+
+                return (
+                  <article className="impacted-appointment-card" key={appointment.id}>
+                    <div className="impacted-appointment-card__header">
+                      <div>
+                        <span>Cliente</span>
+                        <strong>{appointment.client_name ?? "Cliente sem nome"}</strong>
+                      </div>
+                      <span>{appointment.client_phone ?? "Cliente sem telefone"}</span>
+                    </div>
+
+                    <dl className="impacted-appointment-card__details">
+                      <div>
+                        <dt>Serviço</dt>
+                        <dd>{getAppointmentServiceLabel(appointment)}</dd>
+                      </div>
+                      <div>
+                        <dt>Data</dt>
+                        <dd>{formatDateLabel(appointment.scheduled_date)}</dd>
+                      </div>
+                      <div>
+                        <dt>Horário</dt>
+                        <dd>
+                          {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{getAppointmentStatusLabel(appointment)}</dd>
+                      </div>
+                      <div>
+                        <dt>Profissional</dt>
+                        <dd>{getProfessionalLabel(appointment)}</dd>
+                      </div>
+                    </dl>
+
+                    <button
+                      className="secondary-button"
+                      disabled={!whatsappPhone}
+                      onClick={() => openWhatsAppNotice(appointment)}
+                      type="button"
+                    >
+                      {whatsappPhone ? "Chamar no WhatsApp" : "Cliente sem telefone"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="appointment-modal__footer">
+            <button className="cancel-button" disabled={isSaving} onClick={onClose} type="button">
+              Cancelar bloqueio
+            </button>
+            <button className="save-button" disabled={isSaving} onClick={handleContinueBlock} type="button">
+              {isSaving ? "Bloqueando..." : "Continuar bloqueio"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="appointment-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <section className="appointment-modal appointment-modal--block" onMouseDown={(event) => event.stopPropagation()}>
         <div className="appointment-modal__header">
           <div>
             <h2>{mode === "professional" ? "Bloquear profissional" : "Bloquear horário"}</h2>
@@ -160,15 +393,13 @@ export function ScheduleBlockModal({
           </button>
         </div>
 
-        {errorMessage ? <p className="inline-error">{errorMessage}</p> : null}
+        <div className="appointment-modal__body appointment-modal__body--block">
+          {errorMessage ? <p className="inline-error">{errorMessage}</p> : null}
 
-        <div className="modal-form-grid">
+          <div className="modal-form-grid schedule-block-grid">
           {mode === "time" ? (
             <>
-              <label className="field-label">
-                Data
-                <input onChange={(event) => setBlockDate(event.target.value)} type="date" value={blockDate} />
-              </label>
+              <AppDatePicker className="field-label" label="Data" onChange={setBlockDate} value={blockDate} />
               <label className="field-label">
                 Afetar
                 <select onChange={(event) => setScope(event.target.value as ScheduleBlockScope)} value={scope}>
@@ -179,19 +410,25 @@ export function ScheduleBlockModal({
             </>
           ) : (
             <>
-              <label className="field-label">
-                Data inicial
-                <input onChange={(event) => setStartDate(event.target.value)} type="date" value={startDate} />
-              </label>
-              <label className="field-label">
-                Data final
-                <input onChange={(event) => setEndDate(event.target.value)} type="date" value={endDate} />
-              </label>
+              <AppDatePicker
+                className="field-label"
+                label="Data inicial"
+                maxDate={endDate || undefined}
+                onChange={setStartDate}
+                value={startDate}
+              />
+              <AppDatePicker
+                className="field-label"
+                label="Data final"
+                minDate={startDate || undefined}
+                onChange={setEndDate}
+                value={endDate}
+              />
             </>
           )}
 
           {(mode === "professional" || scope === "professional") ? (
-            <label className="field-label">
+            <label className="field-label schedule-block-professional">
               Profissional
               <select onChange={(event) => setProfessionalId(event.target.value)} value={professionalId}>
                 {professionals.map((professional) => (
@@ -203,7 +440,7 @@ export function ScheduleBlockModal({
             </label>
           ) : null}
 
-          <label className="field-label">
+          <label className="field-label schedule-block-start">
             Horário inicial
             <select onChange={(event) => setStartTime(event.target.value)} value={startTime}>
               {timeSlots.map((timeSlot) => (
@@ -213,22 +450,23 @@ export function ScheduleBlockModal({
               ))}
             </select>
           </label>
-          <label className="field-label">
+          <label className="field-label schedule-block-end">
             Horário final
             <select onChange={(event) => setEndTime(event.target.value)} value={endTime}>
-              {timeSlots.map((timeSlot) => (
+              {endTimeOptions.map((timeSlot) => (
                 <option key={timeSlot} value={timeSlot}>
                   {timeSlot}
                 </option>
               ))}
             </select>
           </label>
-        </div>
+          </div>
 
-        <label className="field-label">
-          Motivo
-          <textarea onChange={(event) => setReason(event.target.value)} value={reason} />
-        </label>
+          <label className="field-label field-label--full schedule-block-reason">
+            Motivo
+            <textarea onChange={(event) => setReason(event.target.value)} value={reason} />
+          </label>
+        </div>
 
         <div className="appointment-modal__footer">
           <button className="cancel-button" disabled={isSaving} onClick={onClose} type="button">

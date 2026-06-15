@@ -1,5 +1,11 @@
 import type { Appointment } from "../types/agenda";
 
+export const DEFAULT_WORKING_HOURS = {
+  start: "08:00",
+  end: "22:00",
+  slotMinutes: 30,
+} as const;
+
 export function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -66,15 +72,30 @@ export function addDays(date: Date, amount: number) {
   return nextDate;
 }
 
-export function generateTimeSlots(start: string, end: string, intervalMinutes: number) {
+export function generateTimeSlots(
+  start = DEFAULT_WORKING_HOURS.start,
+  end = DEFAULT_WORKING_HOURS.end,
+  intervalMinutes = DEFAULT_WORKING_HOURS.slotMinutes,
+) {
   const slots: string[] = [];
   const endMinutes = timeToMinutes(end);
 
-  for (let current = timeToMinutes(start); current <= endMinutes; current += intervalMinutes) {
+  for (let current = timeToMinutes(start); current < endMinutes; current += intervalMinutes) {
     slots.push(minutesToTime(current));
   }
 
   return slots;
+}
+
+export function isTimeRangeWithinWorkingHours(startTime: string, endTime: string) {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+
+  return (
+    startMinutes >= timeToMinutes(DEFAULT_WORKING_HOURS.start) &&
+    endMinutes <= timeToMinutes(DEFAULT_WORKING_HOURS.end) &&
+    endMinutes > startMinutes
+  );
 }
 
 export function getAppointmentsForSlot(

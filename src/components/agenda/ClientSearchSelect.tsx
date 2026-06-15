@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { maskPhone } from "../../lib/phone";
 import { supabase } from "../../lib/supabase";
 import type { Client } from "../../types/agenda";
+import { AppDatePicker } from "../ui/AppDatePicker";
 import { SearchInput } from "../ui/SearchInput";
 
 interface ClientSearchSelectProps {
@@ -184,10 +185,14 @@ export function ClientSearchSelect({ selectedClient, onSelect }: ClientSearchSel
             <input onChange={updateNewClient("phone")} type="tel" value={newClient.phone} />
           </label>
 
-          <label className="field-label">
-            Data de nascimento
-            <input onChange={updateNewClient("birth_date")} type="date" value={newClient.birth_date} />
-          </label>
+          <AppDatePicker
+            allowClear
+            className="field-label"
+            label="Data de nascimento"
+            maxDate={new Date().toISOString().slice(0, 10)}
+            onChange={(value) => setNewClient((current) => ({ ...current, birth_date: value }))}
+            value={newClient.birth_date}
+          />
         </div>
 
         <label className="field-label">
