@@ -23,18 +23,24 @@ export function formatAttendantDateTime(value: string | null | undefined) {
     return "Nunca acessou";
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  const formattedDate = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
     month: "2-digit",
     year: "numeric",
   }).format(date);
+
+  const formattedTime = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+  }).format(date);
+
+  return `${formattedDate} às ${formattedTime}`;
 }
 
 export function getRoleDescription(roleName: string | null | undefined) {
   if (roleName === "Administrador") {
-    return "Acesso total ao sistema, incluindo financeiro, equipe, servicos e usuarios.";
+    return "Acesso total ao sistema, incluindo financeiro, equipe, serviços e usuários.";
   }
 
   if (roleName === "Atendente") {

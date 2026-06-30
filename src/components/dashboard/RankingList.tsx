@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { formatCurrency } from "../../lib/agenda";
 import type { MovementGroupItem } from "../../lib/movement";
+import { ChartEmptyState } from "./ModernCharts";
 
 interface RankingListProps {
   title: string;
@@ -13,13 +14,10 @@ export function RankingList({ title, items }: RankingListProps) {
   const maxTotal = Math.max(...visibleItems.map((item) => item.total), 1);
 
   return (
-    <section className="dashboard-panel">
+    <section className="dashboard-panel ranking-panel">
       <h2>{title}</h2>
       {items.length === 0 ? (
-        <div className="movement-empty-state">
-          <strong>Nenhum dado encontrado</strong>
-          <span>Não há movimentação válida para este período.</span>
-        </div>
+        <ChartEmptyState />
       ) : (
         <>
           <div className="ranking-list">
@@ -31,8 +29,13 @@ export function RankingList({ title, items }: RankingListProps) {
                   <span>
                     {item.count} atendimento{item.count === 1 ? "" : "s"} · {formatCurrency(item.total)}
                   </span>
-                  <span>Ticket medio: {formatCurrency(item.averageTicket)}</span>
-                  <span className="ranking-bar" style={{ "--ranking-value": item.total / maxTotal } as CSSProperties} />
+                  <span>Ticket médio: {formatCurrency(item.averageTicket)}</span>
+                  <span
+                    aria-label={`Participação de ${item.name}`}
+                    className="ranking-bar"
+                    role="img"
+                    style={{ "--ranking-value": item.total / maxTotal } as CSSProperties}
+                  />
                 </div>
               </div>
             ))}

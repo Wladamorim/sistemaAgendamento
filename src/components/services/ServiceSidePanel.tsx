@@ -87,7 +87,7 @@ export function ServiceSidePanel({
         </header>
 
         {canManage ? (
-          <div className="client-side-panel__actions">
+          <div className="client-side-panel__actions service-side-panel__actions detail-action-group">
             <button className="primary-button" onClick={() => onEdit(service)} type="button">
               Editar
             </button>
@@ -156,11 +156,11 @@ export function ServiceSidePanel({
               <strong>{formatCurrency(summary.monthlyRevenue)}</strong>
             </div>
             <div>
-              <span>Ticket medio</span>
+              <span>Ticket médio</span>
               <strong>{formatCurrency(summary.averageTicket)}</strong>
             </div>
             <div>
-              <span>Ultimo atendimento</span>
+              <span>Último atendimento</span>
               <strong>
                 {summary.lastCompleted
                   ? `${formatServiceDate(summary.lastCompleted.scheduled_date)} · ${getAppointmentClientName(summary.lastCompleted)}`

@@ -1,8 +1,11 @@
+import type { ReactNode } from "react";
 import { formatCurrency, formatTime } from "../../lib/agenda";
 import { getAppointmentCashAmount, getAppointmentProductionAmount, getPaymentLabel, type MovementAppointment } from "../../lib/movement";
 
 interface MovementTableProps {
   appointments: MovementAppointment[];
+  description?: string;
+  filters?: ReactNode;
   title?: string;
 }
 
@@ -10,10 +13,19 @@ function formatDateValue(value: string) {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(`${value}T00:00:00`));
 }
 
-export function MovementTable({ appointments, title = "Atendimentos do período" }: MovementTableProps) {
+export function MovementTable({ appointments, description, filters, title = "Atendimentos do período" }: MovementTableProps) {
   return (
     <section className="dashboard-panel movement-table-panel">
-      <h2>{title}</h2>
+      <div className="dashboard-panel__header movement-table-panel__header">
+        <div>
+          <h2>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
+        <span>{appointments.length} atendimento(s)</span>
+      </div>
+
+      {filters ? <div className="movement-table-panel__filters">{filters}</div> : null}
+
       {appointments.length === 0 ? (
         <div className="movement-empty-state">
           <strong>Nenhuma movimentação encontrada</strong>

@@ -146,7 +146,7 @@ export function ClientSidePanel({
       <aside
         aria-label="Ficha do cliente"
         aria-modal="true"
-        className="client-side-panel client-profile-modal"
+        className="client-side-panel client-profile-modal client-profile-modal--client"
         role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -163,7 +163,7 @@ export function ClientSidePanel({
           </button>
         </header>
 
-        <div className="client-side-panel__actions">
+        <div className="client-side-panel__actions detail-action-group">
           <button className="primary-button" onClick={() => onNewAppointment(client)} type="button">
             Novo agendamento
           </button>
@@ -177,7 +177,8 @@ export function ClientSidePanel({
           ) : null}
         </div>
 
-        <section className="client-drawer-section">
+        <div className="client-profile-modal__body">
+          <section className="client-drawer-section">
           <h3>Dados do cliente</h3>
           <dl className="client-detail-grid">
             <div>
@@ -215,7 +216,7 @@ export function ClientSidePanel({
               <strong>{formatCurrency(summary.totalSpent)}</strong>
             </div>
             <div>
-              <span>Ticket medio</span>
+              <span>Ticket médio</span>
               <strong>{formatCurrency(getAverageTicket(summary))}</strong>
             </div>
             <div>
@@ -256,7 +257,7 @@ export function ClientSidePanel({
                   <div>
                     <span>{getComboBalanceLabel(combo)}</span>
                     <span>
-                      Validade: {formatComboDateValue(combo.expiration_date)} Â·{" "}
+                      Validade: {formatComboDateValue(combo.expiration_date)} ·{" "}
                       {getComboStatusLabel(combo.effective_status)}
                     </span>
                   </div>
@@ -308,6 +309,7 @@ export function ClientSidePanel({
             </ul>
           )}
         </section>
+        </div>
       </aside>
     </div>
   );

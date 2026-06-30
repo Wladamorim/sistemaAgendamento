@@ -17,5 +17,6 @@ export interface PublicUserRow {
   email: string | null;
   phone: string | null;
   is_active: boolean | null;
+  last_access_at?: string | null;
   roles: { id: string; name: string | null } | { id: string; name: string | null }[] | null;
 }

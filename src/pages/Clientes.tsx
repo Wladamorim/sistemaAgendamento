@@ -4,7 +4,7 @@ import { ClientFormModal } from "../components/clients/ClientFormModal";
 import { ClientSearch } from "../components/clients/ClientSearch";
 import { ClientSidePanel } from "../components/clients/ClientSidePanel";
 import { ClientTable } from "../components/clients/ClientTable";
-import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { PageContainer } from "../components/layout/PageContainer";
 import { supabase } from "../lib/supabase";
 import type {
   ClientAppointmentRecord,
@@ -18,6 +18,9 @@ import type { AppUser } from "../types/user";
 interface ClientesProps {
   user: AppUser;
 }
+
+type ClientModalMode = "create" | "details" | "edit" | "deactivate" | null;
+type ClientModalReturnMode = "details" | null;
 
 const futureStatusCodes = new Set(["scheduled", "confirmed", "in_progress"]);
 
@@ -164,6 +167,59 @@ function ClientTableSkeleton() {
   );
 }
 
+interface ClientDeactivateModalProps {
+  client: ClientRecord;
+  isSaving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+function ClientDeactivateModal({ client, isSaving, onCancel, onConfirm }: ClientDeactivateModalProps) {
+  return (
+    <div className="modal-backdrop client-action-modal-overlay" role="presentation" onMouseDown={onCancel}>
+      <section
+        aria-labelledby="client-deactivate-title"
+        aria-modal="true"
+        className="appointment-modal client-form-modal client-deactivate-modal"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="appointment-modal__header">
+          <div>
+            <h2 id="client-deactivate-title">Desativar cliente</h2>
+            <p>Tem certeza que deseja desativar este cliente?</p>
+          </div>
+          <button aria-label="Fechar" className="icon-button" onClick={onCancel} type="button">
+            ×
+          </button>
+        </div>
+
+        <div className="appointment-modal__body">
+          <div className="client-deactivate-summary">
+            <div>
+              <span>Cliente</span>
+              <strong>{client.full_name}</strong>
+            </div>
+            <div>
+              <span>Telefone</span>
+              <strong>{client.phone || "Não informado"}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="appointment-modal__footer">
+          <button className="cancel-button" disabled={isSaving} onClick={onCancel} type="button">
+            Cancelar
+          </button>
+          <button className="danger-button" disabled={isSaving} onClick={onConfirm} type="button">
+            {isSaving ? "Desativando..." : "Desativar cliente"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function Clientes({ user }: ClientesProps) {
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [clientAppointments, setClientAppointments] = useState<ClientAppointmentRecord[]>([]);
@@ -173,10 +229,9 @@ export function Clientes({ user }: ClientesProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [clientModalMode, setClientModalMode] = useState<ClientModalMode>(null);
   const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
-  const [panelClient, setPanelClient] = useState<ClientRecord | null>(null);
-  const [clientToDeactivate, setClientToDeactivate] = useState<ClientRecord | null>(null);
+  const [clientModalReturnMode, setClientModalReturnMode] = useState<ClientModalReturnMode>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const userIsAdmin = isAdmin(user);
 
@@ -261,7 +316,7 @@ export function Clientes({ user }: ClientesProps) {
     });
   }, [activeFilter, clientSummaries, clients, searchTerm]);
 
-  const panelSummary = panelClient ? clientSummaries[panelClient.id] ?? emptyClientSummary : emptyClientSummary;
+  const selectedClientSummary = selectedClient ? clientSummaries[selectedClient.id] ?? emptyClientSummary : emptyClientSummary;
   const hasSearchOrFilter = Boolean(searchTerm.trim()) || activeFilter !== "all";
   const emptyTitle = clients.length === 0 ? "Nenhum cliente cadastrado" : "Nenhum cliente encontrado";
   const emptyDescription =
@@ -274,18 +329,58 @@ export function Clientes({ user }: ClientesProps) {
     window.setTimeout(() => setToastMessage(null), 3600);
   }
 
-  function closeModal() {
-    setModalMode(null);
+  function closeClientModal() {
+    setClientModalMode(null);
     setSelectedClient(null);
+    setClientModalReturnMode(null);
     setIsSaving(false);
   }
 
-  function handleEditClient(client: ClientRecord) {
+  function openClientDetails(client: ClientRecord) {
     setSelectedClient(client);
-    setModalMode("edit");
+    setClientModalReturnMode(null);
+    setIsSaving(false);
+    setClientModalMode("details");
+  }
+
+  function handleEditClient(client: ClientRecord) {
+    const shouldReturnToDetails = clientModalMode === "details" && selectedClient?.id === client.id;
+
+    setSelectedClient(client);
+    setClientModalReturnMode(shouldReturnToDetails ? "details" : null);
+    setIsSaving(false);
+    setClientModalMode("edit");
+  }
+
+  function handleDeactivateRequest(client: ClientRecord) {
+    const shouldReturnToDetails = clientModalMode === "details" && selectedClient?.id === client.id;
+
+    setSelectedClient(client);
+    setClientModalReturnMode(shouldReturnToDetails ? "details" : null);
+    setIsSaving(false);
+    setClientModalMode("deactivate");
+  }
+
+  function openCreateClientModal() {
+    setSelectedClient(null);
+    setClientModalReturnMode(null);
+    setIsSaving(false);
+    setClientModalMode("create");
+  }
+
+  function cancelClientModalAction() {
+    if (clientModalReturnMode === "details" && selectedClient) {
+      setClientModalMode("details");
+      setClientModalReturnMode(null);
+      setIsSaving(false);
+      return;
+    }
+
+    closeClientModal();
   }
 
   function handleNewAppointment(client: ClientRecord) {
+    closeClientModal();
     window.sessionStorage.setItem(
       "agenda_prefill_client",
       JSON.stringify({
@@ -326,7 +421,7 @@ export function Clientes({ user }: ClientesProps) {
       return;
     }
 
-    closeModal();
+    closeClientModal();
     setReloadKey((current) => current + 1);
     showToast("Cliente cadastrado com sucesso.");
   }
@@ -371,45 +466,55 @@ export function Clientes({ user }: ClientesProps) {
       return;
     }
 
-    setPanelClient((current) =>
-      current?.id === selectedClient.id
-        ? ({
-            ...current,
-            ...updatePayload,
-            updated_at: new Date().toISOString(),
-          } as ClientRecord)
-        : current,
-    );
-    closeModal();
+    const updatedClient = {
+      ...selectedClient,
+      ...updatePayload,
+      updated_at: new Date().toISOString(),
+    } as ClientRecord;
+
+    setClients((current) => current.map((client) => (client.id === selectedClient.id ? updatedClient : client)));
+    setIsSaving(false);
+    setClientModalReturnMode(null);
+    setClientModalMode(clientModalReturnMode === "details" ? "details" : null);
+    setSelectedClient(clientModalReturnMode === "details" ? updatedClient : null);
     setReloadKey((current) => current + 1);
     showToast("Cliente atualizado com sucesso.");
   }
 
   async function handleDeactivateClient() {
-    if (!clientToDeactivate || !userIsAdmin) {
+    if (!selectedClient || !userIsAdmin) {
       return;
     }
 
-    const { error } = await supabase.from("clients").update({ is_active: false }).eq("id", clientToDeactivate.id);
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    const { error } = await supabase.from("clients").update({ is_active: false }).eq("id", selectedClient.id);
 
     if (error) {
       console.error(error);
       setErrorMessage("Erro ao desativar cliente.");
-      setClientToDeactivate(null);
+      setIsSaving(false);
       return;
     }
 
-    if (panelClient?.id === clientToDeactivate.id) {
-      setPanelClient(null);
-    }
+    const deactivatedClient = {
+      ...selectedClient,
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    } as ClientRecord;
 
-    setClientToDeactivate(null);
+    setClients((current) => current.map((client) => (client.id === selectedClient.id ? deactivatedClient : client)));
+    setIsSaving(false);
+    setClientModalReturnMode(null);
+    setClientModalMode(clientModalReturnMode === "details" ? "details" : null);
+    setSelectedClient(clientModalReturnMode === "details" ? deactivatedClient : null);
     setReloadKey((current) => current + 1);
     showToast("Cliente desativado com sucesso.");
   }
 
   return (
-    <main className="clients-page clients-page--operational">
+    <PageContainer className="clients-page clients-page--operational">
       <header className="clients-header">
         <div>
           <h1>Clientes</h1>
@@ -423,7 +528,7 @@ export function Clientes({ user }: ClientesProps) {
       <section className="clients-toolbar clients-toolbar--operational">
         <div className="clients-toolbar-top">
           <ClientSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
-          <button className="add-button" onClick={() => setModalMode("create")} type="button">
+          <button className="add-button" onClick={openCreateClientModal} type="button">
             + Adicionar cliente
           </button>
         </div>
@@ -471,47 +576,46 @@ export function Clientes({ user }: ClientesProps) {
           canDelete={userIsAdmin}
           clientSummaries={clientSummaries}
           clients={filteredClients}
-          emptyDescription={hasSearchOrFilter ? emptyDescription : "Cadastre o primeiro cliente para comecar."}
+          emptyDescription={hasSearchOrFilter ? emptyDescription : "Cadastre o primeiro cliente para começar."}
           emptyTitle={emptyTitle}
-          onDeactivate={setClientToDeactivate}
+          onDeactivate={handleDeactivateRequest}
           onEdit={handleEditClient}
           onNewAppointment={handleNewAppointment}
-          onView={setPanelClient}
+          onView={openClientDetails}
         />
       )}
 
-      {modalMode ? (
+      {clientModalMode === "create" || clientModalMode === "edit" ? (
         <ClientFormModal
           client={selectedClient}
           isSaving={isSaving}
-          mode={modalMode}
-          onClose={closeModal}
-          onSubmit={modalMode === "create" ? handleCreateClient : handleUpdateClient}
+          mode={clientModalMode}
+          onClose={clientModalMode === "edit" ? cancelClientModalAction : closeClientModal}
+          onSubmit={clientModalMode === "create" ? handleCreateClient : handleUpdateClient}
           user={user}
         />
       ) : null}
 
-      {panelClient ? (
+      {selectedClient && clientModalMode === "details" ? (
         <ClientSidePanel
           canDelete={userIsAdmin}
-          client={panelClient}
-          onClose={() => setPanelClient(null)}
-          onDeactivate={setClientToDeactivate}
+          client={selectedClient}
+          onClose={closeClientModal}
+          onDeactivate={handleDeactivateRequest}
           onEdit={handleEditClient}
           onNewAppointment={handleNewAppointment}
-          summary={panelSummary}
+          summary={selectedClientSummary}
         />
       ) : null}
 
-      {clientToDeactivate ? (
-        <ConfirmDialog
-          confirmLabel="Desativar"
-          message="Deseja desativar este cliente? Ele não será removido permanentemente, apenas ficará inativo."
-          onCancel={() => setClientToDeactivate(null)}
+      {selectedClient && clientModalMode === "deactivate" ? (
+        <ClientDeactivateModal
+          client={selectedClient}
+          isSaving={isSaving}
+          onCancel={cancelClientModalAction}
           onConfirm={handleDeactivateClient}
-          title="Desativar cliente"
         />
       ) : null}
-    </main>
+    </PageContainer>
   );
 }

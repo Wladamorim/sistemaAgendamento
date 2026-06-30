@@ -1514,7 +1514,7 @@ export function AppointmentDetailsModal({
                   <strong>{comboPaymentInfo?.comboName ?? "Combo"}</strong>
                 </div>
                 <div>
-                  <span>ProduÃ§Ã£o registrada</span>
+                  <span>Produção registrada</span>
                   <strong>{formatCurrency(comboPaymentInfo?.productionValue ?? details.price_at_booking)}</strong>
                 </div>
               </>
@@ -1589,7 +1589,7 @@ export function AppointmentDetailsModal({
         ) : null}
 
         {details && canContactOnWhatsApp ? (
-          <div className="appointment-whatsapp-action">
+          <div className="appointment-whatsapp-action detail-action-group">
             <button
               className="secondary-button whatsapp-button"
               disabled={!hasWhatsappPhone}
@@ -1603,7 +1603,7 @@ export function AppointmentDetailsModal({
         ) : null}
 
         {details && canEditAppointment ? (
-          <div className="appointment-actions">
+          <div className="appointment-actions detail-action-group">
             {canConfirmAppointment ? (
               <button
                 className="save-button"
@@ -1818,7 +1818,7 @@ export function AppointmentDetailsModal({
                           <strong>{combo.name}</strong>
                           <em>{getComboBalanceLabel(combo)}</em>
                           <small>
-                            {getComboLinkedLabel(combo)} Â· Validade: {formatDateValue(combo.expiration_date)} Â· Valor do
+                            {getComboLinkedLabel(combo)} · Validade: {formatDateValue(combo.expiration_date)} · Valor do
                             combo: {getComboPriceLabel(combo)}
                           </small>
                         </span>

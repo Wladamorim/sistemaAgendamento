@@ -1,9 +1,11 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isAdmin } from "../components/AppShell";
 import { RestrictedAccess } from "../components/RestrictedAccess";
 import { MetricCard } from "../components/dashboard/MetricCard";
+import { CHART_COLORS, ModernAreaChart, ModernDoughnutChart } from "../components/dashboard/ModernCharts";
 import { MovementTable } from "../components/dashboard/MovementTable";
 import { RankingList } from "../components/dashboard/RankingList";
+import { PageContainer } from "../components/layout/PageContainer";
 import { SystemEventsPanel } from "../components/movement/SystemEventsPanel";
 import { AppDatePicker } from "../components/ui/AppDatePicker";
 import { SearchInput } from "../components/ui/SearchInput";
@@ -59,7 +61,12 @@ interface PeriodRange {
 }
 
 interface ChartItem {
+  averageTicket: number;
+  completedAppointments: number;
+  fullLabel: string;
   label: string;
+  topCategory: string | null;
+  topProfessional: string | null;
   total: number;
 }
 
@@ -127,7 +134,7 @@ interface RawComboSaleRow {
 }
 
 const periodOptions: { label: string; value: MovementPeriod }[] = [
-  { label: "Diario", value: "day" },
+  { label: "Diário", value: "day" },
   { label: "Semanal", value: "week" },
   { label: "Mensal", value: "month" },
   { label: "Trimestral", value: "quarter" },
@@ -146,7 +153,7 @@ const periodAdjective: Record<MovementPeriod, string> = {
 
 const previousPeriodLabel: Record<MovementPeriod, string> = {
   day: "dia anterior",
-  month: "mes anterior",
+  month: "mês anterior",
   quarter: "trimestre anterior",
   semester: "semestre anterior",
   week: "semana anterior",
@@ -165,15 +172,29 @@ const statusFilterOptions: { label: string; value: MovementStatusFilter }[] = [
 const paymentFilterOptions: { label: string; value: MovementPaymentFilter }[] = [
   { label: "Todos pagamentos", value: "all" },
   { label: "Pix", value: "pix" },
-  { label: "Credito", value: "cartao_credito" },
-  { label: "Debito", value: "cartao_debito" },
+  { label: "Crédito", value: "cartao_credito" },
+  { label: "Débito", value: "cartao_debito" },
   { label: "Dinheiro", value: "dinheiro" },
-  { label: "Transferencia", value: "transferencia" },
+  { label: "Transferência", value: "transferencia" },
   { label: "Cortesia", value: "cortesia" },
-  { label: "Multiplas", value: "multiplas" },
+  { label: "Múltiplas", value: "multiplas" },
   { label: "Combo", value: "combo" },
   { label: "Não informado", value: "nao_informado" },
 ];
+
+const monthShortLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+const paymentChartColors: Record<string, string> = {
+  cartao_credito: CHART_COLORS.primary,
+  cartao_debito: CHART_COLORS.secondary,
+  combo: CHART_COLORS.danger,
+  cortesia: CHART_COLORS.neutral,
+  dinheiro: CHART_COLORS.warning,
+  nao_informado: CHART_COLORS.neutral,
+  outro: CHART_COLORS.neutral,
+  pix: CHART_COLORS.positive,
+  transferencia: CHART_COLORS.secondary,
+};
 
 function startOfWeek(date: Date) {
   const nextDate = new Date(date);
@@ -269,6 +290,15 @@ function formatShortDate(date: Date) {
     month: "2-digit",
     year: "numeric",
   }).format(date);
+}
+
+function formatFullMonthLabel(date: Date) {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function formatPeriodLabel(range: PeriodRange, period: MovementPeriod) {
@@ -423,19 +453,64 @@ function getAppointmentDateTime(appointment: MovementAppointment) {
   return new Date(`${appointment.scheduled_date}T${appointment.start_time || "00:00"}`);
 }
 
+function getTopProductionName(appointments: MovementAppointment[], key: "professional_name" | "category_name") {
+  const totals = new Map<string, { count: number; total: number }>();
+
+  appointments.forEach((appointment) => {
+    const name = appointment[key];
+
+    if (!name) {
+      return;
+    }
+
+    const current = totals.get(name) ?? { count: 0, total: 0 };
+    current.count += 1;
+    current.total += getAppointmentProductionAmount(appointment);
+    totals.set(name, current);
+  });
+
+  return (
+    [...totals.entries()].sort(
+      ([firstName, first], [secondName, second]) =>
+        second.total - first.total || second.count - first.count || firstName.localeCompare(secondName, "pt-BR"),
+    )[0]?.[0] ?? null
+  );
+}
+
+function buildChartPoint(label: string, fullLabel: string, appointments: MovementAppointment[]): ChartItem {
+  const total = appointments.reduce((sum, appointment) => sum + getAppointmentProductionAmount(appointment), 0);
+  const completedAppointments = appointments.length;
+
+  return {
+    averageTicket: completedAppointments > 0 ? total / completedAppointments : 0,
+    completedAppointments,
+    fullLabel,
+    label,
+    topCategory: getTopProductionName(appointments, "category_name"),
+    topProfessional: getTopProductionName(appointments, "professional_name"),
+    total,
+  };
+}
+
 function buildChartData(appointments: MovementAppointment[], range: PeriodRange, period: MovementPeriod): ChartItem[] {
-  const buckets = new Map<string, ChartItem>();
+  const buckets = new Map<string, { appointments: MovementAppointment[]; fullLabel: string; label: string }>();
 
   if (period === "day") {
     appointments.forEach((appointment) => {
       const hour = appointment.start_time.slice(0, 2);
       const key = `${hour}h`;
-      const current = buckets.get(key) ?? { label: key, total: 0 };
-      current.total += getAppointmentProductionAmount(appointment);
+      const current = buckets.get(key) ?? {
+        appointments: [],
+        fullLabel: formatShortDate(range.start),
+        label: key,
+      };
+      current.appointments.push(appointment);
       buckets.set(key, current);
     });
 
-    return [...buckets.values()].sort((left, right) => left.label.localeCompare(right.label));
+    return [...buckets.values()]
+      .map((bucket) => buildChartPoint(bucket.label, bucket.fullLabel, bucket.appointments))
+      .sort((left, right) => left.label.localeCompare(right.label));
   }
 
   if (period === "week" || period === "month") {
@@ -444,8 +519,9 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
     while (current <= range.end) {
       const key = formatDateForQuery(current);
       buckets.set(key, {
+        appointments: [],
+        fullLabel: formatShortDate(current),
         label: period === "week" ? new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(current) : String(current.getDate()),
-        total: 0,
       });
       current = addDays(current, 1);
     }
@@ -453,11 +529,11 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
     appointments.forEach((appointment) => {
       const currentBucket = buckets.get(appointment.scheduled_date);
       if (currentBucket) {
-        currentBucket.total += getAppointmentProductionAmount(appointment);
+        currentBucket.appointments.push(appointment);
       }
     });
 
-    return [...buckets.values()];
+    return [...buckets.values()].map((bucket) => buildChartPoint(bucket.label, bucket.fullLabel, bucket.appointments));
   }
 
   let current = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
@@ -465,8 +541,9 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
   while (current <= range.end) {
     const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`;
     buckets.set(key, {
-      label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(current),
-      total: 0,
+      appointments: [],
+      fullLabel: formatFullMonthLabel(current),
+      label: monthShortLabels[current.getMonth()],
     });
     current.setMonth(current.getMonth() + 1);
   }
@@ -475,11 +552,11 @@ function buildChartData(appointments: MovementAppointment[], range: PeriodRange,
     const key = appointment.scheduled_date.slice(0, 7);
     const currentBucket = buckets.get(key);
     if (currentBucket) {
-      currentBucket.total += getAppointmentProductionAmount(appointment);
+      currentBucket.appointments.push(appointment);
     }
   });
 
-  return [...buckets.values()];
+  return [...buckets.values()].map((bucket) => buildChartPoint(bucket.label, bucket.fullLabel, bucket.appointments));
 }
 
 function getUniqueOptions(appointments: MovementAppointment[], key: "professional_name" | "category_name") {
@@ -687,6 +764,12 @@ function downloadCsv(appointments: MovementAppointment[]) {
 }
 
 function PaymentBreakdown({ items, total }: { items: PaymentBreakdownItem[]; total: number }) {
+  const chartItems = items.map((item) => ({
+    color: paymentChartColors[item.key],
+    label: item.label,
+    value: item.total,
+  }));
+
   return (
     <section className="dashboard-panel cash-closing-panel">
       <div className="dashboard-panel__header">
@@ -696,53 +779,46 @@ function PaymentBreakdown({ items, total }: { items: PaymentBreakdownItem[]; tot
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <div className="movement-empty-state">
-          <strong>Sem pagamentos registrados</strong>
-          <span>Sem pagamentos registrados neste período.</span>
-        </div>
-      ) : (
-        <div className="payment-breakdown-list">
-          {items.map((item) => (
-            <div className="payment-breakdown-item" key={item.key}>
-              <div>
-                <strong>{item.label}</strong>
-                <span>
-                  {formatCurrency(item.total)} · {item.percent.toFixed(0)}%
-                </span>
-              </div>
-              <span className="payment-bar" style={{ "--payment-value": item.percent / 100 } as CSSProperties} />
-            </div>
-          ))}
-        </div>
-      )}
+      <ModernDoughnutChart
+        centerLabel="Total"
+        centerValue={formatCurrency(total)}
+        items={chartItems}
+        valueFormatter={formatCurrency}
+      />
     </section>
   );
 }
 
 function RevenueChart({ items }: { items: ChartItem[] }) {
-  const maxValue = Math.max(...items.map((item) => item.total), 0);
+  const total = items.reduce((sum, item) => sum + item.total, 0);
+  const average = items.length > 0 ? total / items.length : 0;
+  const chartItems = items.map((item) => ({
+    averageTicket: item.averageTicket,
+    completedAppointments: item.completedAppointments,
+    fullLabel: item.fullLabel,
+    label: item.label,
+    productionTotal: item.total,
+    topCategory: item.topCategory,
+    topProfessional: item.topProfessional,
+    value: item.total,
+  }));
 
   return (
     <section className="dashboard-panel revenue-chart-panel">
-      <h2>Produção por período</h2>
-      {maxValue === 0 ? (
-        <div className="movement-empty-state">
-          <strong>Sem dados para exibir grafico</strong>
-          <span>Não há atendimentos finalizados neste período.</span>
+      <div className="dashboard-panel__header">
+        <div>
+          <h2>Produção por período</h2>
+          <p>Evolução da produção no período selecionado.</p>
         </div>
-      ) : (
-        <div className="revenue-chart">
-          {items.map((item) => (
-            <div className="revenue-chart__item" key={item.label}>
-              <span className="revenue-chart__bar" style={{ "--chart-value": item.total / maxValue } as CSSProperties}>
-                <em>{formatCurrency(item.total)}</em>
-              </span>
-              <strong>{item.label}</strong>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
+
+      <ModernAreaChart items={chartItems} valueFormatter={formatCurrency} />
+
+      <div className="chart-summary" aria-label="Resumo da produção">
+        <strong>Resumo:</strong>
+        <span>Total: {formatCurrency(total)}</span>
+        <span>Média: {formatCurrency(average)}</span>
+      </div>
     </section>
   );
 }
@@ -905,14 +981,16 @@ export function Movimentacao({ user }: MovimentacaoProps) {
   }
 
   return (
-    <main className="movement-page">
+    <PageContainer className="movement-page">
       <header className="movement-header">
         <div>
           <h1>Movimentação</h1>
           <p>Resumo financeiro e operacional por período</p>
         </div>
+      </header>
 
-        {activeSection !== "events" ? (
+      {activeSection !== "events" ? (
+        <section aria-label="Filtros da movimentação" className="movement-top-filters">
           <div className="movement-date-controls">
             <label className="movement-date-input">
               Período
@@ -948,8 +1026,8 @@ export function Movimentacao({ user }: MovimentacaoProps) {
               {selectedPeriod === "day" ? "Amanhã" : "Próximo"}
             </button>
           </div>
-        ) : null}
-      </header>
+        </section>
+      ) : null}
 
       <nav aria-label="Seções da movimentação" className="movement-section-tabs">
         <button
@@ -1067,71 +1145,76 @@ export function Movimentacao({ user }: MovimentacaoProps) {
                 <RankingList items={categoryRanking} title="Ranking por rendimento - categorias" />
               </section>
 
-              <section className="movement-filters-panel">
-                <SearchInput
-                  className="client-search movement-search"
-                  onChange={setSearchTerm}
-                  placeholder="Buscar cliente, serviço ou profissional"
-                  value={searchTerm}
-                />
-                <label className="movement-date-input">
-                  Status
-                  <select
-                    onChange={(event) => setStatusFilter(event.target.value as MovementStatusFilter)}
-                    value={statusFilter}
-                  >
-                    {statusFilterOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="movement-date-input">
-                  Pagamento
-                  <select
-                    onChange={(event) => setPaymentFilter(event.target.value as MovementPaymentFilter)}
-                    value={paymentFilter}
-                  >
-                    {paymentFilterOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="movement-date-input">
-                  Profissional
-                  <select onChange={(event) => setProfessionalFilter(event.target.value)} value={professionalFilter}>
-                    <option value="all">Todos profissionais</option>
-                    {professionalOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="movement-date-input">
-                  Categoria
-                  <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
-                    <option value="all">Todas categorias</option>
-                    {categoryOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button className="secondary-button" onClick={() => downloadCsv(filteredAppointments)} type="button">
-                  Exportar CSV
-                </button>
-              </section>
-
-              <MovementTable appointments={filteredAppointments} title="Atendimentos do período" />
+              <MovementTable
+                appointments={filteredAppointments}
+                description="Use os filtros para refinar por status, pagamento, profissional ou categoria."
+                filters={
+                  <div className="movement-filters-panel" aria-label="Filtros dos atendimentos do período">
+                    <SearchInput
+                      className="client-search movement-search"
+                      onChange={setSearchTerm}
+                      placeholder="Buscar cliente, serviço ou profissional"
+                      value={searchTerm}
+                    />
+                    <label className="movement-date-input">
+                      Status
+                      <select
+                        onChange={(event) => setStatusFilter(event.target.value as MovementStatusFilter)}
+                        value={statusFilter}
+                      >
+                        {statusFilterOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="movement-date-input">
+                      Pagamento
+                      <select
+                        onChange={(event) => setPaymentFilter(event.target.value as MovementPaymentFilter)}
+                        value={paymentFilter}
+                      >
+                        {paymentFilterOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="movement-date-input">
+                      Profissional
+                      <select onChange={(event) => setProfessionalFilter(event.target.value)} value={professionalFilter}>
+                        <option value="all">Todos profissionais</option>
+                        {professionalOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="movement-date-input">
+                      Categoria
+                      <select onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}>
+                        <option value="all">Todas categorias</option>
+                        {categoryOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button className="secondary-button" onClick={() => downloadCsv(filteredAppointments)} type="button">
+                      Exportar CSV
+                    </button>
+                  </div>
+                }
+                title="Atendimentos do período"
+              />
             </>
           )}
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

@@ -5,6 +5,7 @@ import { AgendaToolbar } from "../components/agenda/AgendaToolbar";
 import { AppointmentCreateModal } from "../components/agenda/AppointmentCreateModal";
 import { AppointmentDetailsModal } from "../components/agenda/AppointmentDetailsModal";
 import { ScheduleBlockModal } from "../components/agenda/ScheduleBlockModal";
+import { PageContainer } from "../components/layout/PageContainer";
 import { SearchInput } from "../components/ui/SearchInput";
 import { addDays, formatDateForQuery, formatTime, generateTimeSlots, timeToMinutes } from "../lib/agenda";
 import { getAppointmentStatusLabel } from "../lib/appointmentStatus";
@@ -100,7 +101,7 @@ export function Agenda({ user }: AgendaProps) {
       try {
         const client = JSON.parse(rawClient) as Client;
         setPrefilledClient(client);
-        setToastMessage(`Cliente selecionado: ${client.full_name}. Clique em um horario livre para concluir.`);
+        setToastMessage(`Cliente selecionado: ${client.full_name}. Clique em um horário livre para concluir.`);
         window.setTimeout(() => setToastMessage(null), 4200);
       } catch (error) {
         console.error("AGENDA PREFILL CLIENT ERROR:", error);
@@ -430,7 +431,7 @@ export function Agenda({ user }: AgendaProps) {
   }
 
   return (
-    <main className="agenda-page">
+    <PageContainer className="agenda-page">
       <AgendaToolbar
         canManageBlocks={canManageBlocks}
         date={selectedDate}
@@ -713,6 +714,6 @@ export function Agenda({ user }: AgendaProps) {
           onClose={() => setSelectedAppointment(null)}
         />
       ) : null}
-    </main>
+    </PageContainer>
   );
 }

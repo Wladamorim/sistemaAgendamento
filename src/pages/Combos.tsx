@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { isAdmin } from "../components/AppShell";
+import { PageContainer } from "../components/layout/PageContainer";
 import { AppDatePicker } from "../components/ui/AppDatePicker";
 import { SearchInput } from "../components/ui/SearchInput";
 import {
@@ -469,7 +470,7 @@ export function Combos({ user }: CombosProps) {
     const packagePrice = parseMoneyValue(templateForm.package_price);
 
     if (!totalSessions || totalSessions <= 0 || !validityDays || validityDays <= 0) {
-      setErrorMessage("Informe sessoes e validade maiores que zero.");
+      setErrorMessage("Informe sessões e validade maiores que zero.");
       return;
     }
 
@@ -877,35 +878,35 @@ export function Combos({ user }: CombosProps) {
   }
 
   return (
-    <main className="combos-page">
+    <PageContainer className="combos-page">
       <header className="movement-header combos-header">
         <div>
           <h1>Combos</h1>
           <p>Gerencie modelos, vendas e uso de combos dos clientes</p>
         </div>
-
-        <div className="combos-header__actions">
-          {canLinkComboToClient ? (
-            <button className="secondary-button" onClick={() => openClientComboForm()} type="button">
-              Vincular combo ao cliente
-            </button>
-          ) : null}
-          {canManageComboTemplates ? (
-            <button className="add-button" onClick={openNewTemplateForm} type="button">
-              + Novo combo
-            </button>
-          ) : null}
-        </div>
       </header>
 
       <section className="clients-toolbar--operational combos-toolbar">
-        <div className="clients-toolbar-top">
+        <div className="combos-toolbar-row">
           <SearchInput
             className="client-search"
             onChange={setSearchTerm}
             placeholder="Buscar combo, cliente ou serviço"
             value={searchTerm}
           />
+
+          <div className="combos-actions">
+            {canLinkComboToClient ? (
+              <button className="secondary-button" onClick={() => openClientComboForm()} type="button">
+                Vincular combo ao cliente
+              </button>
+            ) : null}
+            {canManageComboTemplates ? (
+              <button className="add-button" onClick={openNewTemplateForm} type="button">
+                + Novo combo
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="combo-tab-list" role="tablist" aria-label="Areas de combos">
@@ -968,7 +969,7 @@ export function Combos({ user }: CombosProps) {
             <div className="combo-list">
               <div className="combo-list__header" aria-hidden="true">
                 <span>Combo</span>
-                <span>Vinculo</span>
+                <span>Vínculo</span>
                 <span>Sessoes/valor</span>
                 <span>Situação</span>
                 <span>Ações</span>
@@ -986,7 +987,7 @@ export function Combos({ user }: CombosProps) {
                   </div>
                   <div className="combo-list-row__meta">
                     <strong>
-                      {template.total_sessions} sessoes Â· {getComboPriceLabel(template)}
+                      {template.total_sessions} sessões · {getComboPriceLabel(template)}
                     </strong>
                     <span>Validade: {template.validity_days} dias</span>
                   </div>
@@ -1044,7 +1045,7 @@ export function Combos({ user }: CombosProps) {
             <div className="combo-list">
               <div className="combo-list__header" aria-hidden="true">
                 <span>Cliente/combo</span>
-                <span>Vinculo</span>
+                <span>Vínculo</span>
                 <span>Saldo/validade</span>
                 <span>Situação</span>
                 <span>Ações</span>
@@ -1112,7 +1113,7 @@ export function Combos({ user }: CombosProps) {
             <div className="appointment-modal__header">
               <div>
                 <h2>{editingTemplate ? "Editar modelo de combo" : "Novo modelo de combo"}</h2>
-                <p>Configure sessoes, validade, valor e vinculo do combo.</p>
+                <p>Configure sessões, validade, valor e vínculo do combo.</p>
               </div>
               <button className="icon-button" onClick={() => setShowTemplateForm(false)} type="button">
                 x
@@ -1128,7 +1129,7 @@ export function Combos({ user }: CombosProps) {
                 />
               </label>
               <label className="field-label">
-                Tipo de vinculo
+                Tipo de vínculo
                 <select
                   onChange={(event) =>
                     setTemplateForm((form) => ({
@@ -1176,7 +1177,7 @@ export function Combos({ user }: CombosProps) {
                 </label>
               )}
               <label className="field-label">
-                Quantidade de sessoes
+                Quantidade de sessões
                 <input
                   min="1"
                   onChange={(event) => setTemplateForm((form) => ({ ...form, total_sessions: event.target.value }))}
@@ -1243,7 +1244,7 @@ export function Combos({ user }: CombosProps) {
             <div className="appointment-modal__header">
               <div>
                 <h2>Vincular combo ao cliente</h2>
-                <p>Registre a compra do combo e o saldo inicial de sessoes.</p>
+                <p>Registre a compra do combo e o saldo inicial de sessões.</p>
               </div>
               <button className="icon-button" onClick={() => setShowClientComboForm(false)} type="button">
                 x
@@ -1445,7 +1446,7 @@ export function Combos({ user }: CombosProps) {
 
             <form className="modal-form-grid" onSubmit={handleUpdateClientCombo}>
               <label className="field-label">
-                Total de sessoes
+                Total de sessões
                 <input
                   min={editingClientCombo.used_sessions}
                   onChange={(event) =>
@@ -1516,7 +1517,7 @@ export function Combos({ user }: CombosProps) {
             </header>
 
             {(canLinkComboToClient && selectedTemplate.is_active) || canManageComboTemplates ? (
-              <div className="combo-detail-modal__actions">
+              <div className="combo-detail-modal__actions detail-action-group">
                 {canLinkComboToClient && selectedTemplate.is_active ? (
                   <button
                     className="primary-button"
@@ -1659,7 +1660,7 @@ export function Combos({ user }: CombosProps) {
             </header>
 
             {(canEditClientCombo || canCancelClientCombo) && selectedClientCombo.effective_status !== "cancelled" ? (
-              <div className="combo-detail-modal__actions">
+              <div className="combo-detail-modal__actions detail-action-group">
                 {canEditClientCombo ? (
                   <button
                     className="secondary-button"
@@ -1772,6 +1773,6 @@ export function Combos({ user }: CombosProps) {
           </section>
         </div>
       ) : null}
-    </main>
+    </PageContainer>
   );
 }

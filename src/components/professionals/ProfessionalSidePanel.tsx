@@ -98,7 +98,7 @@ export function ProfessionalSidePanel({
           </button>
         </header>
 
-        <div className="client-side-panel__actions">
+        <div className="client-side-panel__actions professional-side-panel__actions detail-action-group">
           <button className="primary-button" onClick={() => onViewAgenda(professional)} type="button">
             Ver agenda
           </button>
@@ -178,7 +178,7 @@ export function ProfessionalSidePanel({
               <strong>{formatCurrency(summary.monthlyRevenue)}</strong>
             </div>
             <div>
-              <span>Ticket medio</span>
+              <span>Ticket médio</span>
               <strong>{formatCurrency(summary.averageTicket)}</strong>
             </div>
           </div>

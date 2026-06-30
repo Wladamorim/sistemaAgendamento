@@ -80,7 +80,7 @@ export function ProfessionalServicesModal({
             Cancelar
           </button>
           <button className="save-button" disabled={isSaving} onClick={() => onSave(selectedServiceIds)} type="button">
-            {isSaving ? "Salvando..." : "Salvar vinculos"}
+            {isSaving ? "Salvando..." : "Salvar vínculos"}
           </button>
         </div>
       </section>

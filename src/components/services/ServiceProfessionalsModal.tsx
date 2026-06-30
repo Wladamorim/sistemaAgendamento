@@ -85,7 +85,7 @@ export function ServiceProfessionalsModal({
             onClick={() => onSave(selectedProfessionalIds)}
             type="button"
           >
-            {isSaving ? "Salvando..." : "Salvar vinculos"}
+            {isSaving ? "Salvando..." : "Salvar vínculos"}
           </button>
         </div>
       </section>

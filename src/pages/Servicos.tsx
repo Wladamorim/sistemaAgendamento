@@ -5,6 +5,7 @@ import { ServiceProfessionalsModal } from "../components/services/ServiceProfess
 import { ServiceSearch } from "../components/services/ServiceSearch";
 import { ServiceSidePanel } from "../components/services/ServiceSidePanel";
 import { ServiceTable } from "../components/services/ServiceTable";
+import { PageContainer } from "../components/layout/PageContainer";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { formatDateForQuery } from "../lib/agenda";
 import {
@@ -721,7 +722,7 @@ export function Servicos({ user }: ServicosProps) {
   }
 
   return (
-    <main className="clients-page services-page">
+    <PageContainer className="clients-page services-page">
       <header className="clients-header">
         <div>
           <h1>Serviços</h1>
@@ -822,6 +823,6 @@ export function Servicos({ user }: ServicosProps) {
           title="Desativar serviço"
         />
       ) : null}
-    </main>
+    </PageContainer>
   );
 }

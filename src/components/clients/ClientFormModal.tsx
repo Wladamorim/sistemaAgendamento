@@ -53,7 +53,7 @@ export function ClientFormModal({ client, isSaving, mode, user, onClose, onSubmi
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
         aria-labelledby="client-form-title"
-        className="appointment-modal"
+        className="appointment-modal client-form-modal"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="appointment-modal__header">
@@ -138,7 +138,7 @@ export function ClientFormModal({ client, isSaving, mode, user, onClose, onSubmi
             Cancelar
           </button>
           <button className="save-button" disabled={isSaving} onClick={() => onSubmit(values)} type="button">
-            {isSaving ? "Salvando..." : "Salvar"}
+            {isSaving ? "Salvando..." : isEditing ? "Salvar alterações" : "Salvar"}
           </button>
         </div>
       </section>

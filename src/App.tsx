@@ -26,6 +26,20 @@ function mapUserRow(row: PublicUserRow): AppUser {
   };
 }
 
+async function updateCurrentUserLastAccess(appUser: AppUser) {
+  try {
+    console.log("[Auth] atualizando last_access_at para:", appUser.auth_user_id);
+
+    const { error } = await supabase.rpc("update_current_user_last_access");
+
+    if (error) {
+      console.warn("[Auth] Falha ao atualizar last_access_at:", error);
+    }
+  } catch (error) {
+    console.warn("[Auth] Falha ao atualizar last_access_at:", error);
+  }
+}
+
 async function fetchAppUser(authUser: SupabaseAuthUser): Promise<AppUser> {
   console.log("AUTH USER ID:", authUser.id);
   console.log("AUTH EMAIL:", authUser.email);
@@ -148,6 +162,7 @@ export default function App() {
       const appUser = await fetchAppUser(data.user);
       setUser(appUser);
       setErrorMessage(null);
+      void updateCurrentUserLastAccess(appUser);
     } catch (error) {
       setUser(null);
       setErrorMessage(error instanceof Error ? error.message : INVALID_CREDENTIALS_MESSAGE);

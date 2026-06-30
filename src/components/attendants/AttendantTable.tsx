@@ -67,7 +67,7 @@ export function AttendantTable({
 
                 <div className="attendant-list-row__access">
                   <strong>{formatAttendantDateTime(attendant.last_access_at)}</strong>
-                  <span>Ultimo acesso</span>
+                  <span>Último acesso</span>
                 </div>
 
                 <div className="client-row-actions attendant-list-row__actions">

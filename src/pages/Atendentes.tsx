@@ -9,6 +9,7 @@ import { AttendantSearch } from "../components/attendants/AttendantSearch";
 import { AttendantSidePanel } from "../components/attendants/AttendantSidePanel";
 import { AttendantTable } from "../components/attendants/AttendantTable";
 import { isAdmin } from "../components/AppShell";
+import { PageContainer } from "../components/layout/PageContainer";
 import { RestrictedAccess } from "../components/RestrictedAccess";
 import { getAttendantRole } from "../lib/attendants";
 import { supabase } from "../lib/supabase";
@@ -152,6 +153,7 @@ export function Atendentes({ user }: AtendentesProps) {
           is_active,
           created_at,
           updated_at,
+          last_access_at,
           roles (
             id,
             name
@@ -171,7 +173,16 @@ export function Atendentes({ user }: AtendentesProps) {
         setErrorMessage("Erro ao carregar atendentes.");
         setAttendants([]);
       } else {
-        setAttendants((usersResult.data ?? []) as unknown as AttendantRecord[]);
+        const users = (usersResult.data ?? []) as unknown as AttendantRecord[];
+        console.log("[Atendentes] usuários:", users);
+        console.log(
+          "[Atendentes] valores de last_access_at:",
+          users.map((user) => ({
+            email: user.email,
+            last_access_at: user.last_access_at,
+          })),
+        );
+        setAttendants(users);
       }
 
       if (rolesResult.error) {
@@ -528,7 +539,7 @@ export function Atendentes({ user }: AtendentesProps) {
   }
 
   return (
-    <main className="clients-page clients-page--operational attendants-page">
+    <PageContainer className="clients-page clients-page--operational attendants-page">
       <header className="clients-header">
         <div>
           <h1>Atendentes</h1>
@@ -631,6 +642,6 @@ export function Atendentes({ user }: AtendentesProps) {
           onConfirm={handleCriticalActionConfirm}
         />
       ) : null}
-    </main>
+    </PageContainer>
   );
 }

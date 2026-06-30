@@ -6,6 +6,7 @@ import { ProfessionalSearch } from "../components/professionals/ProfessionalSear
 import { ProfessionalServicesModal } from "../components/professionals/ProfessionalServicesModal";
 import { ProfessionalSidePanel } from "../components/professionals/ProfessionalSidePanel";
 import { ProfessionalTable } from "../components/professionals/ProfessionalTable";
+import { PageContainer } from "../components/layout/PageContainer";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { formatDateForQuery } from "../lib/agenda";
 import { supabase } from "../lib/supabase";
@@ -628,7 +629,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
   }
 
   return (
-    <main className="clients-page professionals-page">
+    <PageContainer className="clients-page professionals-page">
       <header className="clients-header">
         <div>
           <h1>Profissionais</h1>
@@ -668,7 +669,7 @@ export function Profissionais({ user }: ProfissionaisProps) {
         <section className="clients-table-panel">
           <div className="clients-empty-state">
             <strong>Nenhum profissional cadastrado</strong>
-            <span>Cadastre profissionais para comecar a montar a agenda.</span>
+            <span>Cadastre profissionais para começar a montar a agenda.</span>
           </div>
         </section>
       ) : (
@@ -746,6 +747,6 @@ export function Profissionais({ user }: ProfissionaisProps) {
           title="Desativar profissional"
         />
       ) : null}
-    </main>
+    </PageContainer>
   );
 }
